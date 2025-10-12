@@ -1,0 +1,38 @@
+# Files and folders to exclude from the pkg bundle
+
+# Development files
+node_modules/nodemon/**
+.git/
+.vscode/
+.idea/
+
+# Documentation
+*.md
+!README.md
+
+# Test files
+test/
+tests/
+*.test.js
+*.spec.js
+
+# Build output
+dist/
+build/
+
+# Logs
+logs/
+*.log
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# IDE files
+*.swp
+*.swo
+*~
+
+# Package files
+package-lock.json
+yarn.lock

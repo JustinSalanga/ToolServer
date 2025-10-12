@@ -1,0 +1,12 @@
+{
+  "name": "TailorResumeAuthServer",
+  "description": "TailorResume Authentication Server - User, IP, and Settings Management",
+  "version": "1.0.0",
+  "company": "TailorResume",
+  "copyright": "Copyright (C) 2024 TailorResume. All rights reserved.",
+  "productName": "TailorResume Auth Server",
+  "internalName": "TailorResumeAuthServer",
+  "originalFilename": "TailorResumeAuthServer.exe",
+  "fileDescription": "TailorResume Authentication Server - Comprehensive user authentication, IP management, and settings configuration",
+  "icon": "resources/icon.ico"
+}

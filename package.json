@@ -1,0 +1,67 @@
+{
+  "name": "tailorresumeauthserver",
+  "version": "1.0.0",
+  "description": "TailorResume Authentication Server - Comprehensive user authentication, IP management, and settings configuration for TailorResume application",
+  "main": "index.js",
+  "bin": "index.js",
+  "author": "TailorResume Team",
+  "copyright": "Copyright (C) 2024 TailorResume. All rights reserved.",
+  "company": "TailorResume",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "setup": "node -e \"require('./database/setup').setupDatabase()\"",
+    "build": "pkg . --compress GZip",
+    "build:win": "pkg . --targets node18-win-x64 --compress GZip --output dist/TailorResumeAuthServer-win.exe",
+    "build:linux": "pkg . --targets node18-linux-x64 --compress GZip --output dist/TailorResumeAuthServer-linux",
+    "build:mac": "pkg . --targets node18-macos-x64 --compress GZip --output dist/TailorResumeAuthServer-macos",
+    "build:all": "npm run build:win && npm run build:linux && npm run build:mac"
+  },
+  "pkg": {
+    "assets": [
+      "public/**/*"
+    ],
+    "scripts": [
+      "index.js",
+      "config/**/*.js",
+      "controllers/**/*.js",
+      "database/**/*.js",
+      "routers/**/*.js",
+      "utils/**/*.js"
+    ],
+    "targets": [
+      "node18-win-x64"
+    ],
+    "outputPath": "dist",
+    "options": []
+  },
+  "keywords": [
+    "auth",
+    "jwt",
+    "express",
+    "postgresql",
+    "authentication",
+    "tailorresume",
+    "ip-management",
+    "user-management"
+  ],
+  "license": "UNLICENSED",
+  "type": "commonjs",
+  "dependencies": {
+    "bcryptjs": "^3.0.2",
+    "body-parser": "^2.2.0",
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "express": "^5.1.0",
+    "jsonwebtoken": "^9.0.2",
+    "morgan": "^1.10.1",
+    "passport": "^0.7.0",
+    "passport-jwt": "^4.0.1",
+    "pg": "^8.16.3"
+  },
+  "devDependencies": {
+    "nodemon": "^3.0.1",
+    "pkg": "^5.8.1",
+    "rcedit": "^4.0.1"
+  }
+}
