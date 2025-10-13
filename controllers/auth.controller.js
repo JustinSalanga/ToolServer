@@ -29,6 +29,15 @@ exports.register = async (req, res) => {
         // Create user with registration IP
         const newUser = await model.createUser(name, email, hashedPassword, clientIP);
 
+        // Save IP to ips table with the new user's email
+        try {
+            await model.createIP(newUser.id, clientIP);
+            console.log(`IP ${clientIP} saved to ips table for user: ${newUser.email}`);
+        } catch (ipError) {
+            // Log error but don't fail registration if IP save fails
+            console.error('Error saving IP to ips table:', ipError);
+        }
+
         // Remove password from response
         delete newUser.password;
 
