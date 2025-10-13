@@ -1,7 +1,6 @@
 // Global state
 let currentPage = 'login';
 let usersData = [];
-let ipsData = [];
 let settingsData = [];
 let gptModels = [];
 let selectedGPTModel = null;
@@ -116,7 +115,6 @@ function showLoginView() {
 
     // Clear any stored data
     usersData = [];
-    ipsData = [];
     settingsData = [];
     configsData = [];
 
@@ -200,7 +198,6 @@ function showPage(pageName) {
 
     // Load data for the page
     if (pageName === 'users') loadUsers();
-    if (pageName === 'ips') loadIPs();
     if (pageName === 'settings') loadSettings();
     if (pageName === 'gpt') loadGPTModels();
     if (pageName === 'configs') loadConfigs();
@@ -267,7 +264,7 @@ function logout() {
 
 async function loadUsers() {
     const tbody = document.getElementById('usersTableBody');
-    tbody.innerHTML = '<tr><td colspan="6" class="loading">Loading users...</td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="loading">Loading users...</td></tr>';
 
     try {
         const data = await UsersAPI.getAll();
@@ -278,7 +275,7 @@ async function loadUsers() {
         if (error.message.includes('Session expired')) {
             return; // Don't show error, user is being redirected
         }
-        tbody.innerHTML = `<tr><td colspan="6" class="loading" style="color: red;">Error: ${error.message}</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="loading" style="color: red;">Error: ${error.message}</td></tr>`;
     }
 }
 
@@ -286,7 +283,7 @@ function renderUsers(users) {
     const tbody = document.getElementById('usersTableBody');
 
     if (users.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="loading">No users found</td></tr>';
+        tbody.innerHTML = '<tr><td colspan="7" class="loading">No users found</td></tr>';
         return;
     }
 
@@ -302,6 +299,7 @@ function renderUsers(users) {
             <td>${user.id}</td>
             <td>${user.name} ${isCurrentUser ? '<span class="badge badge-success" style="font-size: 10px;">You</span>' : ''}</td>
             <td>${user.email}</td>
+            <td>${user.registration_ip || '<em>Not set</em>'}</td>
             <td>
                 <span class="badge ${user.blocked === 1 ? 'badge-success' : 'badge-danger'}">
                     ${user.blocked === 1 ? 'Active' : 'Blocked'}
@@ -398,6 +396,11 @@ function editUser(id) {
                 <label>Email</label>
                 <input type="email" id="editUserEmail" value="${user.email}" required>
             </div>
+            <div class="form-group">
+                <label>Registration IP</label>
+                <input type="text" id="editUserIP" value="${user.registration_ip || ''}" placeholder="192.168.1.100">
+                <small>Leave empty to allow login from any IP</small>
+            </div>
             <button type="submit" class="btn btn-primary">Update User</button>
         </form>
     `;
@@ -409,9 +412,10 @@ async function updateUser(event, id) {
 
     const name = document.getElementById('editUserName').value;
     const email = document.getElementById('editUserEmail').value;
+    const registration_ip = document.getElementById('editUserIP').value.trim() || null;
 
     try {
-        await UsersAPI.update(id, name, email);
+        await UsersAPI.update(id, name, email, registration_ip);
         closeModal();
         loadUsers();
         await showAlert('User updated successfully!', 'Success');
@@ -471,229 +475,6 @@ async function deleteUser(id) {
         await UsersAPI.delete(id);
         loadUsers();
         await showAlert('User deleted successfully!', 'Success');
-    } catch (error) {
-        await showAlert('Error: ' + error.message, 'Error');
-    }
-}
-
-// ========== IP MANAGEMENT ==========
-
-async function loadIPs() {
-    const tbody = document.getElementById('ipsTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading IPs...</td></tr>';
-
-    try {
-        // Load both IPs and users data for display
-        const [ipsResult, usersResult] = await Promise.all([
-            IPsAPI.getAll(),
-            usersData.length === 0 ? UsersAPI.getAll() : Promise.resolve({ users: usersData })
-        ]);
-
-        ipsData = ipsResult.ips || [];
-        if (usersData.length === 0) {
-            usersData = usersResult.users || [];
-        }
-
-        renderIPs(ipsData);
-    } catch (error) {
-        // Check if it's an auth error (user already redirected to login)
-        if (error.message.includes('Session expired')) {
-            return; // Don't show error, user is being redirected
-        }
-        tbody.innerHTML = `<tr><td colspan="5" class="loading" style="color: red;">Error: ${error.message}</td></tr>`;
-    }
-}
-
-function renderIPs(ips) {
-    const tbody = document.getElementById('ipsTableBody');
-
-    if (ips.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading">No IPs found</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = ips.map(ip => {
-        // Find user info for display
-        const user = usersData.find(u => u.id == ip.userid);
-        const userDisplay = user ? `${user.name} (${user.email})` : `User ID: ${ip.userid}`;
-
-        return `
-            <tr>
-                <td>${ip.id}</td>
-                <td>${userDisplay}</td>
-                <td>${ip.ip}</td>
-                <td>${new Date(ip.created_at).toLocaleDateString()}</td>
-                <td>
-                    <div class="btn-group">
-                        <button onclick="editIP(${ip.id})" class="btn btn-secondary btn-sm">Edit</button>
-                        <button onclick="deleteIP(${ip.id})" class="btn btn-danger btn-sm">Delete</button>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
-}
-
-function filterIPs() {
-    const searchText = document.getElementById('ipSearch').value.toLowerCase();
-    const filtered = ipsData.filter(ip => {
-        const user = usersData.find(u => u.id == ip.userid);
-        const userName = user ? user.name.toLowerCase() : '';
-        const userEmail = user ? user.email.toLowerCase() : '';
-
-        return userName.includes(searchText) ||
-               userEmail.includes(searchText) ||
-               ip.userid.toString().toLowerCase().includes(searchText) ||
-               ip.ip.toLowerCase().includes(searchText);
-    });
-    renderIPs(filtered);
-}
-
-async function showAddIPModal() {
-    const modalBody = document.getElementById('modalBody');
-
-    // Show loading state
-    modalBody.innerHTML = `
-        <h2>Add New IP</h2>
-        <div class="loading-text">Loading users...</div>
-    `;
-    openModal();
-
-    try {
-        // Fetch users if not already loaded
-        if (usersData.length === 0) {
-            const data = await UsersAPI.getAll();
-            usersData = data.users || [];
-        }
-
-        // Generate users dropdown options
-        const userOptions = usersData
-            .map(user => `<option value="${user.id}">${user.name} (${user.email})</option>`)
-            .join('');
-
-        modalBody.innerHTML = `
-            <h2>Add New IP</h2>
-            <form onsubmit="addIP(event)">
-                <div class="form-group">
-                    <label>Select User</label>
-                    <select id="newIPUserId" required>
-                        <option value="">-- Select a user --</option>
-                        ${userOptions}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>IP Address</label>
-                    <input type="text" id="newIPAddress" required placeholder="192.168.1.100">
-                </div>
-                <button type="submit" class="btn btn-primary">Add IP</button>
-            </form>
-        `;
-    } catch (error) {
-        modalBody.innerHTML = `
-            <h2>Add New IP</h2>
-            <div style="color: red;">Error loading users: ${error.message}</div>
-            <button onclick="closeModal()" class="btn">Close</button>
-        `;
-    }
-}
-
-async function addIP(event) {
-    event.preventDefault();
-
-    const userId = document.getElementById('newIPUserId').value;
-    const ip = document.getElementById('newIPAddress').value;
-
-    try {
-        await IPsAPI.create(userId, ip);
-        closeModal();
-        loadIPs();
-        await showAlert('IP added successfully!', 'Success');
-    } catch (error) {
-        await showAlert('Error: ' + error.message, 'Error');
-    }
-}
-
-async function editIP(id) {
-    const ip = ipsData.find(i => i.id === id);
-    if (!ip) return;
-
-    const modalBody = document.getElementById('modalBody');
-
-    // Show loading state
-    modalBody.innerHTML = `
-        <h2>Edit IP</h2>
-        <div class="loading-text">Loading users...</div>
-    `;
-    openModal();
-
-    try {
-        // Fetch users if not already loaded
-        if (usersData.length === 0) {
-            const data = await UsersAPI.getAll();
-            usersData = data.users || [];
-        }
-
-        // Generate users dropdown options with current user selected
-        const userOptions = usersData
-            .map(user => `<option value="${user.id}" ${user.id == ip.userid ? 'selected' : ''}>${user.name} (${user.email})</option>`)
-            .join('');
-
-        modalBody.innerHTML = `
-            <h2>Edit IP</h2>
-            <form onsubmit="updateIP(event, ${id})">
-                <div class="form-group">
-                    <label>Select User</label>
-                    <select id="editIPUserId" required>
-                        <option value="">-- Select a user --</option>
-                        ${userOptions}
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label>IP Address</label>
-                    <input type="text" id="editIPAddress" value="${ip.ip}" required>
-                </div>
-                <button type="submit" class="btn btn-primary">Update IP</button>
-            </form>
-        `;
-    } catch (error) {
-        modalBody.innerHTML = `
-            <h2>Edit IP</h2>
-            <div style="color: red;">Error loading users: ${error.message}</div>
-            <button onclick="closeModal()" class="btn">Close</button>
-        `;
-    }
-}
-
-async function updateIP(event, id) {
-    event.preventDefault();
-
-    const userId = document.getElementById('editIPUserId').value;
-    const ip = document.getElementById('editIPAddress').value;
-
-    try {
-        await IPsAPI.update(id, userId, ip);
-        closeModal();
-        loadIPs();
-        await showAlert('IP updated successfully!', 'Success');
-    } catch (error) {
-        await showAlert('Error: ' + error.message, 'Error');
-    }
-}
-
-async function deleteIP(id) {
-    const confirmed = await showConfirm(
-        'Are you sure you want to delete this IP?',
-        'Delete IP'
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-    try {
-        await IPsAPI.delete(id);
-        loadIPs();
-        await showAlert('IP deleted successfully!', 'Success');
     } catch (error) {
         await showAlert('Error: ' + error.message, 'Error');
     }

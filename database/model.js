@@ -13,7 +13,7 @@ exports.getUserById = async (id) => {
     return res.rows[0];
 }
 
-exports.createUser = async (name, email, password, registration_ip = null) => {
+exports.createUser = async (name, email, password, registration_ip) => {
     const res = await db.query(
         `INSERT INTO users (name, email, password, registration_ip) VALUES ($1, $2, $3, $4)
      RETURNING *`,
@@ -30,18 +30,10 @@ exports.getUserByEmail = async (email) => {
     return res.rows[0];
 }
 
-exports.getUserByRegistrationIP = async (ip) => {
+exports.updateUser = async (id, name, email, registration_ip) => {
     const res = await db.query(
-        'SELECT * FROM users WHERE registration_ip = $1',
-        [ip]
-    );
-    return res.rows[0];
-}
-
-exports.updateUser = async (id, name, email) => {
-    const res = await db.query(
-        'UPDATE users SET name = $1, email = $2 WHERE id = $3 RETURNING *',
-        [name, email, id]
+        'UPDATE users SET name = $1, email = $2, registration_ip = $3 WHERE id = $4 RETURNING *',
+        [name, email, registration_ip, id]
     );
     return res.rows[0];
 }
@@ -62,58 +54,11 @@ exports.toggleUserBlock = async (id, blocked) => {
     return res.rows[0];
 }
 
-// IP Management Functions
-exports.getIPs = async () => {
-    const res = await db.query('SELECT * FROM ips ORDER BY created_at DESC');
-    return res.rows;
-}
-
-exports.getIPById = async (id) => {
-    const res = await db.query(
-        'SELECT * FROM ips WHERE id = $1',
-        [id]
-    );
-    return res.rows[0];
-}
-
-exports.getIPsByUser = async (userId) => {
-    const res = await db.query(
-        'SELECT * FROM ips WHERE userId = $1 ORDER BY created_at DESC',
-        [userId]
-    );
-    return res.rows;
-}
-
+// Helper function to get user by registration IP
 exports.getUserByIP = async (ip) => {
     const res = await db.query(
-        `SELECT u.* FROM users u
-         INNER JOIN ips i ON u.id::VARCHAR = i.userId
-         WHERE i.ip = $1`,
+        'SELECT * FROM users WHERE registration_ip = $1',
         [ip]
-    );
-    return res.rows[0];
-}
-
-exports.createIP = async (userId, ip) => {
-    const res = await db.query(
-        'INSERT INTO ips (userId, ip) VALUES ($1, $2) RETURNING *',
-        [userId, ip]
-    );
-    return res.rows[0];
-}
-
-exports.updateIP = async (id, userId, ip) => {
-    const res = await db.query(
-        'UPDATE ips SET userId = $1, ip = $2 WHERE id = $3 RETURNING *',
-        [userId, ip, id]
-    );
-    return res.rows[0];
-}
-
-exports.deleteIP = async (id) => {
-    const res = await db.query(
-        'DELETE FROM ips WHERE id = $1 RETURNING *',
-        [id]
     );
     return res.rows[0];
 }

@@ -67,14 +67,6 @@ async function setupDatabase() {
             );
         `);
         await appClient.query(`
-            CREATE TABLE IF NOT EXISTS ips (
-                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
-                userId VARCHAR(100) NOT NULL,
-                ip VARCHAR(100) NOT NULL,
-                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-            );
-        `);
-        await appClient.query(`
             CREATE TABLE IF NOT EXISTS user_configs (
                 id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 user_email VARCHAR(100) NOT NULL,

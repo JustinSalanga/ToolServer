@@ -119,10 +119,10 @@ const UsersAPI = {
         return apiRequest(`/auth/${id}`);
     },
 
-    async update(id, name, email) {
+    async update(id, name, email, registration_ip) {
         return apiRequest(`/auth/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({ name, email })
+            body: JSON.stringify({ name, email, registration_ip })
         });
     },
 
@@ -140,42 +140,10 @@ const UsersAPI = {
     }
 };
 
-// IPs API
+// IPs API (for IP lookup only)
 const IPsAPI = {
-    async getAll() {
-        return apiRequest('/ips/');
-    },
-
-    async getById(id) {
-        return apiRequest(`/ips/${id}`);
-    },
-
-    async getByUser(userId) {
-        return apiRequest(`/ips/user/${userId}`);
-    },
-
     async getUserByIP(ip) {
         return apiRequest(`/ips/lookup/${encodeURIComponent(ip)}`);
-    },
-
-    async create(userId, ip) {
-        return apiRequest('/ips/', {
-            method: 'POST',
-            body: JSON.stringify({ userId, ip })
-        });
-    },
-
-    async update(id, userId, ip) {
-        return apiRequest(`/ips/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ userId, ip })
-        });
-    },
-
-    async delete(id) {
-        return apiRequest(`/ips/${id}`, {
-            method: 'DELETE'
-        });
     }
 };
 

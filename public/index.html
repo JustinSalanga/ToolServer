@@ -21,9 +21,6 @@
                 <a href="#users" class="nav-link protected-link" data-page="users" style="display: none;">
                     <span class="icon">👥</span> Users
                 </a>
-                <a href="#ips" class="nav-link protected-link" data-page="ips" style="display: none;">
-                    <span class="icon">🌐</span> IP Management
-                </a>
                 <a href="#settings" class="nav-link protected-link" data-page="settings" style="display: none;">
                     <span class="icon">⚙️</span> Settings
                 </a>
@@ -130,6 +127,7 @@
                                     <th>ID</th>
                                     <th>Name</th>
                                     <th>Email</th>
+                                    <th>Registration IP</th>
                                     <th>Status</th>
                                     <th>Created At</th>
                                     <th>Actions</th>
@@ -137,40 +135,7 @@
                             </thead>
                             <tbody id="usersTableBody">
                                 <tr>
-                                    <td colspan="6" class="loading">Loading users...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-
-            <!-- IPs Page -->
-            <div id="page-ips" class="page">
-                <div class="page-header">
-                    <h1>IP Management</h1>
-                    <button onclick="showAddIPModal()" class="btn btn-primary">+ Add IP</button>
-                </div>
-
-                <div class="card">
-                    <div class="search-bar">
-                        <input type="text" id="ipSearch" placeholder="Search IPs..." onkeyup="filterIPs()">
-                    </div>
-
-                    <div class="table-container">
-                        <table id="ipsTable">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>User</th>
-                                    <th>IP Address</th>
-                                    <th>Created At</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="ipsTableBody">
-                                <tr>
-                                    <td colspan="5" class="loading">Loading IPs...</td>
+                                    <td colspan="7" class="loading">Loading users...</td>
                                 </tr>
                             </tbody>
                         </table>

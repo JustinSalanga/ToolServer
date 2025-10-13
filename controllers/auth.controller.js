@@ -18,7 +18,7 @@ exports.register = async (req, res) => {
         }
 
         // Check if user already registered from this IP address
-        const ipUser = await model.getUserByRegistrationIP(clientIP);
+        const ipUser = await model.getUserByIP(clientIP);
         if (ipUser) {
             return handleError(res, 403, 'A user has already been registered from this IP address');
         }
@@ -28,15 +28,7 @@ exports.register = async (req, res) => {
 
         // Create user with registration IP
         const newUser = await model.createUser(name, email, hashedPassword, clientIP);
-
-        // Save IP to ips table with the new user's email
-        try {
-            await model.createIP(newUser.id, clientIP);
-            console.log(`IP ${clientIP} saved to ips table for user: ${newUser.email}`);
-        } catch (ipError) {
-            // Log error but don't fail registration if IP save fails
-            console.error('Error saving IP to ips table:', ipError);
-        }
+        console.log(`User registered with IP ${clientIP}: ${newUser.email}`);
 
         // Remove password from response
         delete newUser.password;
@@ -145,7 +137,7 @@ exports.getUser = async (req, res) => {
 
 exports.updateUser = async (req, res) => {
     const { id } = req.params;
-    const { name, email } = req.body;
+    const { name, email, registration_ip } = req.body;
 
     try {
         // Check if user exists
@@ -163,7 +155,7 @@ exports.updateUser = async (req, res) => {
         }
 
         // Update user
-        const updatedUser = await model.updateUser(id, name, email);
+        const updatedUser = await model.updateUser(id, name, email, registration_ip);
 
         // Remove password from response
         delete updatedUser.password;
@@ -256,5 +248,27 @@ exports.verify = async (req, res) => {
     } catch (error) {
         console.error('Verify token error:', error);
         handleError(res, 500, 'Error verifying token');
+    }
+}
+
+exports.getUserByIP = async (req, res) => {
+    const { ip } = req.params;
+
+    try {
+        const user = await model.getUserByIP(ip);
+
+        if (!user) {
+            return handleError(res, 404, 'User not found for this IP address');
+        }
+
+        // Remove password from response
+        delete user.password;
+
+        res.status(200).json({
+            user
+        });
+    } catch (error) {
+        console.error('Get user by IP error:', error);
+        handleError(res, 500, 'Error fetching user by IP');
     }
 }
