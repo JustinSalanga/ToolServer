@@ -1,6 +1,6 @@
 const express = require('express');
 const { login, getUsers, getUser, updateUser, register, deleteUser, toggleBlock, verify } = require('../controllers/auth.controller');
-const { validateLogin, validateRegister, authenticate } = require('../utils/auth.middleware');
+const { validateLogin, validateRegister, authenticate, authenticateAdmin } = require('../utils/auth.middleware');
 const router = express.Router();
 
 // Public routes (no authentication required)
@@ -14,16 +14,16 @@ router.route('/login')
 router.route('/verify')
     .get(authenticate, verify);
 
-// Protected routes (authentication required)
+// Protected routes (admin authentication required)
 router.route('/')
-    .get(authenticate, getUsers);
+    .get(authenticateAdmin, getUsers);
 
 router.route('/:id')
-    .get(authenticate, getUser)
-    .put(authenticate, updateUser)
-    .delete(authenticate, deleteUser);
+    .get(authenticateAdmin, getUser)
+    .put(authenticateAdmin, updateUser)
+    .delete(authenticateAdmin, deleteUser);
 
 router.route('/:id/block')
-    .patch(authenticate, toggleBlock);
+    .patch(authenticateAdmin, toggleBlock);
 
 module.exports = router;

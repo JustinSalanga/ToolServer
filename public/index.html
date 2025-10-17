@@ -21,14 +21,14 @@
                 <a href="#users" class="nav-link protected-link" data-page="users" style="display: none;">
                     <span class="icon">👥</span> Users
                 </a>
-                <a href="#settings" class="nav-link protected-link" data-page="settings" style="display: none;">
-                    <span class="icon">⚙️</span> Settings
-                </a>
                 <a href="#gpt" class="nav-link protected-link" data-page="gpt" style="display: none;">
                     <span class="icon">🤖</span> GPT Model
                 </a>
-                <a href="#configs" class="nav-link protected-link" data-page="configs" style="display: none;">
+                <a href="#configs" class="nav-link" data-page="configs">
                     <span class="icon">⚙️</span> User Configs
+                </a>
+                <a href="#jobs" class="nav-link" data-page="jobs">
+                    <span class="icon">💼</span> Jobs
                 </a>
             </nav>
             <div class="user-info" id="userInfo" style="display: none;">
@@ -47,7 +47,7 @@
                 <div class="login-container">
                     <div class="login-box">
                         <h1>Admin Login</h1>
-                        <p class="subtitle">Sign in to access the dashboard</p>
+                        <p class="subtitle">Sign in with admin account to access protected features</p>
 
                         <div id="loginError" class="error-message" style="display: none;"></div>
 
@@ -73,7 +73,7 @@
                     <!-- Register Form (Initially Hidden) -->
                     <div class="login-box" id="registerBox" style="display: none;">
                         <h1>Register</h1>
-                        <p class="subtitle">Create a new admin account</p>
+                        <p class="subtitle">Create a new account. First user becomes admin.</p>
 
                         <div id="registerError" class="error-message" style="display: none;"></div>
 
@@ -143,38 +143,6 @@
                 </div>
             </div>
 
-            <!-- Settings Page -->
-            <div id="page-settings" class="page">
-                <div class="page-header">
-                    <h1>Settings Management</h1>
-                    <button onclick="showAddSettingModal()" class="btn btn-primary">+ Add Setting</button>
-                </div>
-
-                <div class="card">
-                    <div class="search-bar">
-                        <input type="text" id="settingSearch" placeholder="Search settings..." onkeyup="filterSettings()">
-                    </div>
-
-                    <div class="table-container">
-                        <table id="settingsTable">
-                            <thead>
-                                <tr>
-                                    <th>ID</th>
-                                    <th>Key</th>
-                                    <th>Value</th>
-                                    <th>Created At</th>
-                                    <th>Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody id="settingsTableBody">
-                                <tr>
-                                    <td colspan="5" class="loading">Loading settings...</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
 
             <!-- GPT Model Selection Page -->
             <div id="page-gpt" class="page">
@@ -254,6 +222,50 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Jobs Page -->
+            <div id="page-jobs" class="page">
+                <div class="page-header">
+                    <h1>Job Management</h1>
+                    <div class="header-buttons">
+                        <button onclick="exportJobsToExcel()" class="btn btn-secondary">📊 Save to Excel</button>
+                        <button onclick="showAddJobModal()" class="btn btn-primary">+ Add Job</button>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="search-bar">
+                        <input type="text" id="jobSearch" placeholder="Search jobs..." onkeyup="filterJobs()">
+                        <select id="jobDateFilter" onchange="filterJobsByDate()" title="Filter by date">
+                            <option value="">All Dates</option>
+                        </select>
+                        <button onclick="clearDateFilter()" class="btn btn-secondary">🗑️ Clear Date</button>
+                        <button onclick="loadJobs()" class="btn btn-secondary">🔄 Refresh</button>
+                    </div>
+
+                    <div class="table-container">
+                        <table id="jobsTable">
+                            <thead>
+                                <tr>
+                                    <th>ID</th>
+                                    <th>Title</th>
+                                    <th>Company</th>
+                                    <th>Tech Stack</th>
+                                    <th>URL</th>
+                                    <th>Description</th>
+                                    <th>Created At</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody id="jobsTableBody">
+                                <tr>
+                                    <td colspan="8" class="loading">Loading jobs...</td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
         </main>
     </div>
 
@@ -294,6 +306,7 @@
         </div>
     </div>
 
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script src="/js/api.js"></script>
     <script src="/js/app.js"></script>
 </body>

@@ -53,6 +53,7 @@ async function setupDatabase() {
                 name VARCHAR(100) NOT NULL,
                 email VARCHAR(100) UNIQUE NOT NULL,
                 password VARCHAR(100) NOT NULL,
+                role VARCHAR(20) DEFAULT 'user',
                 blocked INT DEFAULT 1,
                 registration_ip VARCHAR(45),
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
@@ -79,6 +80,32 @@ async function setupDatabase() {
                 UNIQUE(user_email)
             );
         `);
+        await appClient.query(`
+            CREATE TABLE IF NOT EXISTS jobs (
+                id INT PRIMARY KEY,
+                title VARCHAR(200) NOT NULL,
+                company VARCHAR(200) NOT NULL,
+                tech VARCHAR(500),
+                url VARCHAR(500),
+                normalized_url VARCHAR(500),
+                description TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
+        
+        // Add normalized_url column if it doesn't exist (migration)
+        await appClient.query(`
+            ALTER TABLE jobs 
+            ADD COLUMN IF NOT EXISTS normalized_url VARCHAR(500);
+        `);
+        
+        // Create index on normalized_url for better performance
+        await appClient.query(`
+            CREATE INDEX IF NOT EXISTS idx_jobs_normalized_url 
+            ON jobs(normalized_url);
+        `);
+        
         // console.log('🧩 Tables created successfully!');
 
         console.log('✅ Setup complete!');

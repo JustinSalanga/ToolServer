@@ -60,7 +60,7 @@ function loadEnvironment() {
     console.log('📋 Database Configuration:');
     console.log('   Host:', process.env.PG_HOST);
     console.log('   Password:', process.env.PG_PASSWORD ? '***' : 'NOT SET');
-    console.log('   Server Port:', process.env.PORT || 3000);
+    console.log('   Server Port:', process.env.PORT || 8085);
 
     return true;
 }

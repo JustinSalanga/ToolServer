@@ -12,10 +12,8 @@ const {
     getFolder,
     getAllConfig
 } = require('../controllers/config.controller');
-const { authenticate } = require('../utils/auth.middleware');
 
-// All routes require authentication
-router.use(authenticate);
+// All routes are public (no authentication required)
 
 // Get all configs (must be before /:userEmail)
 router.get('/all', getAllConfigs);

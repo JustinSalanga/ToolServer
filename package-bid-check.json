@@ -1,0 +1,21 @@
+{
+  "name": "bid-check-js",
+  "version": "1.0.0",
+  "description": "JavaScript version of bid_check.py for processing Excel files and detecting duplicates",
+  "main": "bid_check.js",
+  "scripts": {
+    "start": "node bid_check.js",
+    "test": "node bid_check.js test.xlsx"
+  },
+  "dependencies": {
+    "xlsx": "^0.18.5"
+  },
+  "keywords": [
+    "excel",
+    "duplicate-detection",
+    "url-processing",
+    "job-tracking"
+  ],
+  "author": "",
+  "license": "MIT"
+}

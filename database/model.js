@@ -13,11 +13,11 @@ exports.getUserById = async (id) => {
     return res.rows[0];
 }
 
-exports.createUser = async (name, email, password, registration_ip) => {
+exports.createUser = async (name, email, password, registration_ip, role = 'user') => {
     const res = await db.query(
-        `INSERT INTO users (name, email, password, registration_ip) VALUES ($1, $2, $3, $4)
+        `INSERT INTO users (name, email, password, registration_ip, role) VALUES ($1, $2, $3, $4, $5)
      RETURNING *`,
-        [name, email, password, registration_ip]
+        [name, email, password, registration_ip, role]
     );
     return res.rows[0];
 }
@@ -30,10 +30,10 @@ exports.getUserByEmail = async (email) => {
     return res.rows[0];
 }
 
-exports.updateUser = async (id, name, email, registration_ip) => {
+exports.updateUser = async (id, name, email, registration_ip, role) => {
     const res = await db.query(
-        'UPDATE users SET name = $1, email = $2, registration_ip = $3 WHERE id = $4 RETURNING *',
-        [name, email, registration_ip, id]
+        'UPDATE users SET name = $1, email = $2, registration_ip = $3, role = $4 WHERE id = $5 RETURNING *',
+        [name, email, registration_ip, role, id]
     );
     return res.rows[0];
 }
@@ -163,4 +163,193 @@ exports.saveTemplate = async (userEmail, templatePath) => {
 
 exports.saveFolder = async (userEmail, folderPath) => {
     return exports.createOrUpdateConfig(userEmail, 'folder_path', folderPath);
+}
+
+// Job Management Functions
+exports.getJobs = async (date = null) => {
+    let query = 'SELECT * FROM jobs';
+    let params = [];
+    
+    if (date) {
+        query += ' WHERE DATE(created_at) = $1';
+        params.push(date);
+    }
+    
+    query += ' ORDER BY created_at DESC';
+    
+    const res = await db.query(query, params);
+    return res.rows;
+}
+
+exports.getJobById = async (jobId) => {
+    const res = await db.query(
+        'SELECT * FROM jobs WHERE id = $1',
+        [jobId]
+    );
+    return res.rows[0];
+}
+
+exports.getJobByUrl = async (url) => {
+    const res = await db.query(
+        'SELECT * FROM jobs WHERE url = $1',
+        [url]
+    );
+    return res.rows[0];
+}
+
+// URL normalization functions from bid_check.js
+function extractTargetUrl(url) {
+    const urlObj = new URL(url);
+    
+    // Handle known redirect patterns
+    const redirectDomains = {
+        'www.indeed.com': 'jk',
+        'www.wiraa.com': 'source'
+    };
+    
+    if (redirectDomains[urlObj.hostname]) {
+        const targetParam = redirectDomains[urlObj.hostname];
+        const params = new URLSearchParams(urlObj.search);
+        
+        // For Indeed, you might not get the full job URL, just job key
+        if (redirectDomains[urlObj.hostname] === 'jk' && params.has('jk')) {
+            return `https://${urlObj.hostname}/viewjob?jk=${params.get('jk')}`;
+        }
+        
+        if (params.has(targetParam)) {
+            // Decode the redirect target
+            return decodeURIComponent(params.get(targetParam));
+        }
+    }
+    
+    // If not a known redirector, return the original with normalized query
+    return normalizeQuery(url);
+}
+
+function normalizeQuery(url) {
+    const urlObj = new URL(url);
+    const params = new URLSearchParams(urlObj.search);
+    
+    // Sort query parameters
+    const sortedParams = new URLSearchParams();
+    const sortedKeys = Array.from(params.keys()).sort();
+    
+    for (const key of sortedKeys) {
+        sortedParams.append(key, params.get(key));
+    }
+    
+    urlObj.search = sortedParams.toString();
+    return urlObj.toString();
+}
+
+function normalizeFinalUrl(url) {
+    const urlObj = new URL(url);
+    
+    // Remove www. prefix and convert to lowercase
+    let hostname = urlObj.hostname.toLowerCase().replace('www.', '');
+    let pathname = urlObj.pathname.replace(/\/$/, ''); // Remove trailing slash
+    
+    // Normalize query parameters
+    const params = new URLSearchParams(urlObj.search);
+    const sortedParams = new URLSearchParams();
+    const sortedKeys = Array.from(params.keys()).sort();
+    
+    for (const key of sortedKeys) {
+        sortedParams.append(key, params.get(key));
+    }
+    
+    return `${urlObj.protocol}//${hostname}${pathname}?${sortedParams.toString()}`;
+}
+
+function clearLink(link) {
+    link = String(link);
+    
+    // Remove query parameters for certain domains
+    if (link.includes('?') && 
+        !link.includes('indeed') && 
+        !link.includes('builtin') && 
+        !link.includes('wellfound') && 
+        !link.includes('wiraa')) {
+        link = link.split('?')[0];
+    }
+    
+    // Remove trailing slash
+    if (link.endsWith('/')) {
+        link = link.slice(0, -1);
+    }
+    
+    // Remove /apply suffix
+    if (link.endsWith('/apply')) {
+        link = link.slice(0, -6);
+    }
+    
+    // Remove /application suffix
+    if (link.endsWith('/application')) {
+        link = link.slice(0, -12);
+    }
+    
+    // Handle Indeed URLs
+    if (link.includes('www.indeed.com')) {
+        link = extractTargetUrl(link);
+    }
+    
+    return link;
+}
+
+// Function to normalize URL using bid_check.js logic
+function normalizeUrl(url) {
+    try {
+        // First clear the link using bid_check logic
+        const clearedUrl = clearLink(url);
+        // Then normalize the final URL
+        return normalizeFinalUrl(clearedUrl);
+    } catch (error) {
+        // If URL is invalid, return as is
+        return url;
+    }
+}
+
+exports.getJobByNormalizedUrl = async (url) => {
+    const normalizedUrl = normalizeUrl(url);
+    const res = await db.query(
+        'SELECT * FROM jobs WHERE normalized_url = $1',
+        [normalizedUrl]
+    );
+    return res.rows[0];
+}
+
+exports.getJobByTitleAndCompany = async (title, company) => {
+    const res = await db.query(
+        'SELECT * FROM jobs WHERE title = $1 AND company = $2',
+        [title, company]
+    );
+    return res.rows[0];
+}
+
+exports.createJob = async (jobId, title, company, tech, url, description) => {
+    const normalizedUrl = url ? normalizeUrl(url) : null;
+    const res = await db.query(
+        `INSERT INTO jobs (id, title, company, tech, url, normalized_url, description) VALUES ($1, $2, $3, $4, $5, $6, $7)
+         RETURNING *`,
+        [jobId, title, company, tech, url, normalizedUrl, description]
+    );
+    return res.rows[0];
+}
+
+exports.updateJob = async (jobId, title, company, tech, url, description) => {
+    const normalizedUrl = url ? normalizeUrl(url) : null;
+    const res = await db.query(
+        `UPDATE jobs SET title = $1, company = $2, tech = $3, url = $4, normalized_url = $5, description = $6, 
+         updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *`,
+        [title, company, tech, url, normalizedUrl, description, jobId]
+    );
+    return res.rows[0];
+}
+
+exports.deleteJob = async (jobId) => {
+    const res = await db.query(
+        'DELETE FROM jobs WHERE id = $1 RETURNING *',
+        [jobId]
+    );
+    return res.rows[0];
 }

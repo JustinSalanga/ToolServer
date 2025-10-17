@@ -30,9 +30,10 @@ const morgan = require('morgan');
     const passport = require('./config/passport');
     const authRouter = require('./routers/auth.router');
     const ipLookupRouter = require('./routers/ip-lookup.router');
-    const settingsRouter = require('./routers/settings.router');
     const gptRouter = require('./routers/gpt.router');
     const configRouter = require('./routers/config.router');
+    const jobRouter = require('./routers/job.router');
+    const settingsRouter = require('./routers/settings.router');
     const { setupDatabase } = require('./database/setup');
 
     const app = express();
@@ -53,9 +54,10 @@ const morgan = require('morgan');
     // API Routes
     app.use('/api/auth', authRouter);
     app.use('/api/ips', ipLookupRouter);
-    app.use('/api/settings', settingsRouter);
     app.use('/api/gpt', gptRouter);
     app.use('/api/config', configRouter);
+    app.use('/api/jobs', jobRouter);
+    app.use('/api/settings', settingsRouter);
 
     // Serve the dashboard for the root route
     app.get('/', (req, res) => {

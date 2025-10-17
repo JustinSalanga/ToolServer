@@ -1,10 +1,11 @@
 // Global state
 let currentPage = 'login';
 let usersData = [];
-let settingsData = [];
 let gptModels = [];
 let selectedGPTModel = null;
 let configsData = [];
+let jobsData = [];
+let isNavigating = false; // Flag to prevent infinite loops
 
 // ========== CUSTOM MODAL FUNCTIONS ==========
 
@@ -89,22 +90,32 @@ document.addEventListener('DOMContentLoaded', () => {
 function checkAuth() {
     const token = getToken();
     const user = getUser();
+    const currentHash = window.location.hash.substring(1);
+    const publicPages = ['configs', 'jobs'];
 
     if (token && user) {
         showDashboard(user);
+    } else if (publicPages.includes(currentHash)) {
+        // User is on a public page - show it without authentication
+        showPublicView();
     } else {
-        // Not logged in - redirect to login page
+        // Not logged in and not on a public page - redirect to login page
         showLoginView();
         // Clear any hash that might be in the URL
         window.location.hash = '#login';
     }
 }
 
-// Show login view
-function showLoginView() {
+// Show public view (for non-authenticated users on public pages)
+function showPublicView() {
     // Hide protected links
     document.querySelectorAll('.protected-link').forEach(link => {
         link.style.display = 'none';
+    });
+
+    // Show public links
+    document.querySelectorAll('.public-link').forEach(link => {
+        link.style.display = 'flex';
     });
 
     // Show login link
@@ -115,10 +126,46 @@ function showLoginView() {
 
     // Clear any stored data
     usersData = [];
-    settingsData = [];
     configsData = [];
+    jobsData = [];
 
-    showPage('login');
+    // Show the current page based on hash
+    const currentHash = window.location.hash.substring(1);
+    if (currentHash && ['configs', 'jobs'].includes(currentHash)) {
+        showPage(currentHash, false);
+    } else if (!currentHash) {
+        // No hash specified, default to jobs page for public access
+        window.location.hash = '#jobs';
+        showPage('jobs', false);
+    }
+}
+
+// Show login view
+function showLoginView() {
+    // Hide protected links
+    document.querySelectorAll('.protected-link').forEach(link => {
+        link.style.display = 'none';
+    });
+
+    // Show public links
+    document.querySelectorAll('.public-link').forEach(link => {
+        link.style.display = 'flex';
+    });
+
+    // Show login link
+    document.getElementById('loginNavLink').style.display = 'flex';
+
+    // Hide user info
+    document.getElementById('userInfo').style.display = 'none';
+
+    // Clear any stored data
+    usersData = [];
+    configsData = [];
+    jobsData = [];
+
+    // Set hash to login page and show it
+    window.location.hash = '#login';
+    showPage('login', false);
 }
 
 // Show dashboard
@@ -131,11 +178,24 @@ function showDashboard(user) {
         link.style.display = 'flex';
     });
 
+    // Show public links
+    document.querySelectorAll('.public-link').forEach(link => {
+        link.style.display = 'flex';
+    });
+
     // Show user info
     document.getElementById('userInfo').style.display = 'flex';
     document.getElementById('userName').textContent = user.name;
 
-    showPage('users');
+    // Check if user is on a specific page, otherwise default to users
+    const currentHash = window.location.hash.substring(1);
+    if (currentHash && ['users', 'gpt', 'configs', 'jobs'].includes(currentHash)) {
+        showPage(currentHash, false);
+    } else {
+        // Set hash to users page and show it
+        window.location.hash = '#users';
+        showPage('users', false);
+    }
 }
 
 // Setup navigation
@@ -146,14 +206,16 @@ function setupNavigation() {
             e.preventDefault();
             const page = link.getAttribute('data-page');
 
-            if (!getToken() && page !== 'login') {
+            // Check if page requires authentication
+            const protectedPages = ['users', 'gpt'];
+            if (!getToken() && protectedPages.includes(page)) {
                 showAlert('Please login first', 'Authentication Required');
-                showLoginView();
                 window.location.hash = '#login';
                 return;
             }
 
-            showPage(page);
+            // Update hash and show page
+            window.location.hash = `#${page}`;
         });
     });
 
@@ -166,20 +228,50 @@ function setupNavigation() {
 
 // Handle hash changes in URL
 function handleHashChange() {
+    if (isNavigating) return; // Prevent infinite loops
+    
     const hash = window.location.hash.substring(1); // Remove the '#'
+    const token = getToken();
+    const user = getUser();
+    const protectedPages = ['users', 'gpt'];
+    const publicPages = ['configs', 'jobs'];
 
     if (hash && hash !== 'login') {
         // If there's a hash for a protected page, check authentication
-        if (!getToken()) {
+        if (!token && protectedPages.includes(hash)) {
             showLoginView();
-            window.location.hash = '#login';
+            return;
+        } else if (!token && publicPages.includes(hash)) {
+            // Allow access to public pages without authentication
+            showPage(hash, false); // Don't update hash to prevent loop
+            return;
+        } else if (token && user) {
+            // Authenticated user - show the requested page
+            showPage(hash, false); // Don't update hash to prevent loop
             return;
         }
+    } else if (hash === 'login') {
+        // Show login page
+        showPage('login', false); // Don't update hash to prevent loop
+    } else if (!hash) {
+        // No hash specified - default behavior based on authentication
+        isNavigating = true;
+        if (token && user) {
+            window.location.hash = '#users';
+        } else {
+            window.location.hash = '#login';
+        }
+        isNavigating = false;
     }
 }
 
 // Show page
-function showPage(pageName) {
+function showPage(pageName, updateHash = true) {
+    // Update hash in address bar only if requested
+    if (updateHash) {
+        window.location.hash = `#${pageName}`;
+    }
+
     // Hide all pages
     document.querySelectorAll('.page').forEach(page => {
         page.classList.remove('active');
@@ -198,9 +290,14 @@ function showPage(pageName) {
 
     // Load data for the page
     if (pageName === 'users') loadUsers();
-    if (pageName === 'settings') loadSettings();
     if (pageName === 'gpt') loadGPTModels();
     if (pageName === 'configs') loadConfigs();
+    if (pageName === 'jobs') {
+        initializeDateFilter();
+        // Load jobs with today's date as default
+        const today = new Date().toISOString().split('T')[0];
+        loadJobs(today);
+    }
 }
 
 // ========== LOGIN/REGISTER ==========
@@ -229,7 +326,12 @@ async function handleLogin(event) {
         errorDiv.textContent = error.message;
         errorDiv.style.display = 'block';
 
-        // Reload page after 2 seconds to retry
+        // Don't reload page for role-based access denied
+        if (error.message.includes('Admin privileges required')) {
+            return;
+        }
+
+        // Reload page after 2 seconds to retry for other errors
         setTimeout(() => {
             window.location.reload();
         }, 2000);
@@ -257,6 +359,8 @@ async function handleRegister(event) {
 
 function logout() {
     AuthAPI.logout();
+    // Clear hash and show login view
+    window.location.hash = '#login';
     showLoginView();
 }
 
@@ -480,150 +584,6 @@ async function deleteUser(id) {
     }
 }
 
-// ========== SETTINGS MANAGEMENT ==========
-
-async function loadSettings() {
-    const tbody = document.getElementById('settingsTableBody');
-    tbody.innerHTML = '<tr><td colspan="5" class="loading">Loading settings...</td></tr>';
-
-    try {
-        const data = await SettingsAPI.getAll();
-        // Server already filters out protected settings (openai_api_key, selected_gpt_model)
-        settingsData = data.settings || [];
-        renderSettings(settingsData);
-    } catch (error) {
-        // Check if it's an auth error (user already redirected to login)
-        if (error.message.includes('Session expired')) {
-            return; // Don't show error, user is being redirected
-        }
-        tbody.innerHTML = `<tr><td colspan="5" class="loading" style="color: red;">Error: ${error.message}</td></tr>`;
-    }
-}
-
-function renderSettings(settings) {
-    const tbody = document.getElementById('settingsTableBody');
-
-    if (settings.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="5" class="loading">No settings found</td></tr>';
-        return;
-    }
-
-    tbody.innerHTML = settings.map(setting => `
-        <tr>
-            <td>${setting.id}</td>
-            <td><strong>${setting.key}</strong></td>
-            <td>${setting.value}</td>
-            <td>${new Date(setting.created_at).toLocaleDateString()}</td>
-            <td>
-                <div class="btn-group">
-                    <button onclick="editSetting(${setting.id})" class="btn btn-secondary btn-sm">Edit</button>
-                    <button onclick="deleteSetting(${setting.id})" class="btn btn-danger btn-sm">Delete</button>
-                </div>
-            </td>
-        </tr>
-    `).join('');
-}
-
-function filterSettings() {
-    const searchText = document.getElementById('settingSearch').value.toLowerCase();
-    const filtered = settingsData.filter(setting =>
-        setting.key.toLowerCase().includes(searchText) ||
-        setting.value.toLowerCase().includes(searchText)
-    );
-    renderSettings(filtered);
-}
-
-function showAddSettingModal() {
-    const modalBody = document.getElementById('modalBody');
-    modalBody.innerHTML = `
-        <h2>Add New Setting</h2>
-        <form onsubmit="addSetting(event)">
-            <div class="form-group">
-                <label>Key</label>
-                <input type="text" id="newSettingKey" required placeholder="max_login_attempts">
-            </div>
-            <div class="form-group">
-                <label>Value</label>
-                <input type="text" id="newSettingValue" required placeholder="5">
-            </div>
-            <button type="submit" class="btn btn-primary">Add Setting</button>
-        </form>
-    `;
-    openModal();
-}
-
-async function addSetting(event) {
-    event.preventDefault();
-
-    const key = document.getElementById('newSettingKey').value;
-    const value = document.getElementById('newSettingValue').value;
-
-    try {
-        await SettingsAPI.create(key, value);
-        closeModal();
-        loadSettings();
-        await showAlert('Setting added successfully!', 'Success');
-    } catch (error) {
-        await showAlert('Error: ' + error.message, 'Error');
-    }
-}
-
-function editSetting(id) {
-    const setting = settingsData.find(s => s.id === id);
-    if (!setting) return;
-
-    const modalBody = document.getElementById('modalBody');
-    modalBody.innerHTML = `
-        <h2>Edit Setting</h2>
-        <form onsubmit="updateSetting(event, ${id})">
-            <div class="form-group">
-                <label>Key</label>
-                <input type="text" id="editSettingKey" value="${setting.key}" required>
-            </div>
-            <div class="form-group">
-                <label>Value</label>
-                <input type="text" id="editSettingValue" value="${setting.value}" required>
-            </div>
-            <button type="submit" class="btn btn-primary">Update Setting</button>
-        </form>
-    `;
-    openModal();
-}
-
-async function updateSetting(event, id) {
-    event.preventDefault();
-
-    const key = document.getElementById('editSettingKey').value;
-    const value = document.getElementById('editSettingValue').value;
-
-    try {
-        await SettingsAPI.update(id, key, value);
-        closeModal();
-        loadSettings();
-        await showAlert('Setting updated successfully!', 'Success');
-    } catch (error) {
-        await showAlert('Error: ' + error.message, 'Error');
-    }
-}
-
-async function deleteSetting(id) {
-    const confirmed = await showConfirm(
-        'Are you sure you want to delete this setting?',
-        'Delete Setting'
-    );
-
-    if (!confirmed) {
-        return;
-    }
-
-    try {
-        await SettingsAPI.delete(id);
-        loadSettings();
-        await showAlert('Setting deleted successfully!', 'Success');
-    } catch (error) {
-        await showAlert('Error: ' + error.message, 'Error');
-    }
-}
 
 // ========== MODAL ==========
 
@@ -903,5 +863,336 @@ async function viewConfig(userEmail) {
             <p style="color: red;">Failed to load configuration: ${error.message}</p>
             <button onclick="closeModal()" class="btn">Close</button>
         `;
+    }
+}
+
+// ========== JOBS MANAGEMENT ==========
+
+async function loadJobs(date = null) {
+    const tbody = document.getElementById('jobsTableBody');
+    tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading jobs...</td></tr>';
+
+    try {
+        const data = await JobsAPI.getAll(date);
+        jobsData = data.jobs || [];
+        renderJobs(jobsData);
+    } catch (error) {
+        // Check if it's an auth error (user already redirected to login)
+        if (error.message.includes('Session expired')) {
+            return; // Don't show error, user is being redirected
+        }
+        tbody.innerHTML = `<tr><td colspan="8" class="loading" style="color: red;">Error: ${error.message}</td></tr>`;
+    }
+}
+
+function initializeDateFilter() {
+    const dateSelect = document.getElementById('jobDateFilter');
+    const today = new Date();
+    
+    // Clear existing options except "All Dates"
+    dateSelect.innerHTML = '<option value="">All Dates</option>';
+    
+    // Generate options for the last 30 days
+    for (let i = 0; i < 30; i++) {
+        const date = new Date(today);
+        date.setDate(today.getDate() - i);
+        
+        const month = String(date.getMonth() + 1).padStart(2, '0');
+        const day = String(date.getDate()).padStart(2, '0');
+        const dateString = `${month}.${day}`;
+        const isoDate = date.toISOString().split('T')[0];
+        
+        const option = document.createElement('option');
+        option.value = isoDate;
+        option.textContent = dateString;
+        
+        // Set today as default
+        if (i === 0) {
+            option.selected = true;
+        }
+        
+        dateSelect.appendChild(option);
+    }
+}
+
+function renderJobs(jobs) {
+    const tbody = document.getElementById('jobsTableBody');
+
+    if (jobs.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="8" class="loading">No jobs found</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = jobs.map(job => `
+        <tr>
+            <td>${job.id}</td>
+            <td><strong>${job.title}</strong></td>
+            <td>${job.company}</td>
+            <td>${job.tech || '<em>Not specified</em>'}</td>
+            <td>
+                ${job.url ? `<a href="${job.url}" target="_blank" class="btn btn-secondary btn-sm">🔗 View</a>` : '<em>No URL</em>'}
+            </td>
+            <td>
+                ${job.description ? 
+                    `<span title="${job.description}">${job.description.length > 50 ? job.description.substring(0, 50) + '...' : job.description}</span>` : 
+                    '<em>No description</em>'
+                }
+            </td>
+            <td>${new Date(job.created_at).toLocaleDateString()}</td>
+            <td>
+                <div class="btn-group">
+                    <button onclick="editJob(${job.id})" class="btn btn-secondary btn-sm">Edit</button>
+                    <button onclick="deleteJob(${job.id})" class="btn btn-danger btn-sm">Delete</button>
+                </div>
+            </td>
+        </tr>
+    `).join('');
+}
+
+function filterJobs() {
+    const searchText = document.getElementById('jobSearch').value.toLowerCase();
+    const dateFilter = document.getElementById('jobDateFilter').value;
+    
+    let filtered = jobsData;
+    
+    // Apply text search filter
+    if (searchText) {
+        filtered = filtered.filter(job =>
+            job.title.toLowerCase().includes(searchText) ||
+            job.company.toLowerCase().includes(searchText) ||
+            (job.tech && job.tech.toLowerCase().includes(searchText)) ||
+            (job.description && job.description.toLowerCase().includes(searchText))
+        );
+    }
+    
+    // Apply date filter
+    if (dateFilter) {
+        filtered = filtered.filter(job => {
+            const jobDate = new Date(job.created_at).toISOString().split('T')[0];
+            return jobDate === dateFilter;
+        });
+    }
+    
+    renderJobs(filtered);
+}
+
+function filterJobsByDate() {
+    const dateFilter = document.getElementById('jobDateFilter').value;
+    if (dateFilter) {
+        loadJobs(dateFilter);
+    } else {
+        loadJobs();
+    }
+}
+
+function clearDateFilter() {
+    const dateSelect = document.getElementById('jobDateFilter');
+    dateSelect.value = '';
+    loadJobs();
+}
+
+function showAddJobModal() {
+    const modalBody = document.getElementById('modalBody');
+    modalBody.innerHTML = `
+        <h2>Add New Job</h2>
+        <form onsubmit="addJob(event)">
+            <div class="form-group">
+                <label>Job ID *</label>
+                <input type="number" id="newJobId" required placeholder="123" min="1">
+            </div>
+            <div class="form-group">
+                <label>Title *</label>
+                <input type="text" id="newJobTitle" required placeholder="Senior Developer">
+            </div>
+            <div class="form-group">
+                <label>Company *</label>
+                <input type="text" id="newJobCompany" required placeholder="Tech Corp">
+            </div>
+            <div class="form-group">
+                <label>Tech Stack</label>
+                <input type="text" id="newJobTech" placeholder="React, Node.js, PostgreSQL">
+            </div>
+            <div class="form-group">
+                <label>URL</label>
+                <input type="url" id="newJobUrl" placeholder="https://example.com/job/123">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="newJobDescription" rows="4" placeholder="Job description..."></textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Add Job</button>
+        </form>
+    `;
+    openModal();
+}
+
+async function addJob(event) {
+    event.preventDefault();
+
+    const id = parseInt(document.getElementById('newJobId').value);
+    const title = document.getElementById('newJobTitle').value;
+    const company = document.getElementById('newJobCompany').value;
+    const tech = document.getElementById('newJobTech').value;
+    const url = document.getElementById('newJobUrl').value;
+    const description = document.getElementById('newJobDescription').value;
+
+    try {
+        await JobsAPI.create(id, title, company, tech, url, description);
+        closeModal();
+        loadJobs();
+        await showAlert('Job added successfully!', 'Success');
+    } catch (error) {
+        await showAlert('Error: ' + error.message, 'Error');
+    }
+}
+
+function editJob(id) {
+    const job = jobsData.find(j => j.id === id);
+    if (!job) return;
+
+    const modalBody = document.getElementById('modalBody');
+    modalBody.innerHTML = `
+        <h2>Edit Job</h2>
+        <form onsubmit="updateJob(event, ${id})">
+            <div class="form-group">
+                <label>Title *</label>
+                <input type="text" id="editJobTitle" value="${job.title}" required>
+            </div>
+            <div class="form-group">
+                <label>Company *</label>
+                <input type="text" id="editJobCompany" value="${job.company}" required>
+            </div>
+            <div class="form-group">
+                <label>Tech Stack</label>
+                <input type="text" id="editJobTech" value="${job.tech || ''}" placeholder="React, Node.js, PostgreSQL">
+            </div>
+            <div class="form-group">
+                <label>URL</label>
+                <input type="url" id="editJobUrl" value="${job.url || ''}" placeholder="https://example.com/job/123">
+            </div>
+            <div class="form-group">
+                <label>Description</label>
+                <textarea id="editJobDescription" rows="4" placeholder="Job description...">${job.description || ''}</textarea>
+            </div>
+            <button type="submit" class="btn btn-primary">Update Job</button>
+        </form>
+    `;
+    openModal();
+}
+
+async function updateJob(event, id) {
+    event.preventDefault();
+
+    const title = document.getElementById('editJobTitle').value;
+    const company = document.getElementById('editJobCompany').value;
+    const tech = document.getElementById('editJobTech').value;
+    const url = document.getElementById('editJobUrl').value;
+    const description = document.getElementById('editJobDescription').value;
+
+    try {
+        await JobsAPI.update(id, title, company, tech, url, description);
+        closeModal();
+        loadJobs();
+        await showAlert('Job updated successfully!', 'Success');
+    } catch (error) {
+        await showAlert('Error: ' + error.message, 'Error');
+    }
+}
+
+async function deleteJob(id) {
+    const confirmed = await showConfirm(
+        'Are you sure you want to delete this job?',
+        'Delete Job'
+    );
+
+    if (!confirmed) {
+        return;
+    }
+
+    try {
+        await JobsAPI.delete(id);
+        loadJobs();
+        await showAlert('Job deleted successfully!', 'Success');
+    } catch (error) {
+        await showAlert('Error: ' + error.message, 'Error');
+    }
+}
+
+// ========== EXCEL EXPORT ==========
+
+function exportJobsToExcel() {
+    try {
+        // Get the currently displayed jobs (filtered data)
+        const searchText = document.getElementById('jobSearch').value.toLowerCase();
+        const dateFilter = document.getElementById('jobDateFilter').value;
+        
+        let jobsToExport = jobsData;
+        
+        // Apply the same filters as the UI
+        if (searchText) {
+            jobsToExport = jobsToExport.filter(job =>
+                job.title.toLowerCase().includes(searchText) ||
+                job.company.toLowerCase().includes(searchText) ||
+                (job.tech && job.tech.toLowerCase().includes(searchText)) ||
+                (job.description && job.description.toLowerCase().includes(searchText))
+            );
+        }
+        
+        if (dateFilter) {
+            jobsToExport = jobsToExport.filter(job => {
+                const jobDate = new Date(job.created_at).toISOString().split('T')[0];
+                return jobDate === dateFilter;
+            });
+        }
+        
+        if (jobsToExport.length === 0) {
+            showAlert('No jobs to export. Please add some jobs first.', 'No Data');
+            return;
+        }
+        
+        // Prepare data for Excel
+        const excelData = jobsToExport.map(job => ({
+            'Job ID': job.id,
+            'Title': job.title,
+            'Company': job.company,
+            'Tech Stack': job.tech || '',
+            'URL': job.url || '',
+            'Description': job.description || '',
+            'Created At': new Date(job.created_at).toLocaleString(),
+            'Updated At': new Date(job.updated_at).toLocaleString()
+        }));
+        
+        // Create workbook and worksheet
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(excelData);
+        
+        // Set column widths
+        const colWidths = [
+            { wch: 8 },   // Job ID
+            { wch: 30 },  // Title
+            { wch: 20 },  // Company
+            { wch: 25 },  // Tech Stack
+            { wch: 40 },  // URL
+            { wch: 50 },  // Description
+            { wch: 20 },  // Created At
+            { wch: 20 }   // Updated At
+        ];
+        ws['!cols'] = colWidths;
+        
+        // Add worksheet to workbook
+        XLSX.utils.book_append_sheet(wb, ws, 'Jobs');
+        
+        // Generate filename with current date
+        const currentDate = new Date().toISOString().split('T')[0];
+        const filename = `jobs_export_${currentDate}.xlsx`;
+        
+        // Save the file
+        XLSX.writeFile(wb, filename);
+        
+        showAlert(`Successfully exported ${jobsToExport.length} jobs to ${filename}`, 'Export Complete');
+        
+    } catch (error) {
+        console.error('Excel export error:', error);
+        showAlert('Error exporting to Excel: ' + error.message, 'Export Failed');
     }
 }

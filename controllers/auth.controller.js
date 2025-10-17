@@ -26,8 +26,12 @@ exports.register = async (req, res) => {
         // Hash password
         const hashedPassword = await bcrypt.hash(password, 10);
 
-        // Create user with registration IP
-        const newUser = await model.createUser(name, email, hashedPassword, clientIP);
+        // Check if this is the first user (make them admin)
+        const existingUsers = await model.getUsers();
+        const userRole = existingUsers.length === 0 ? 'admin' : 'user';
+        
+        // Create user with registration IP and role
+        const newUser = await model.createUser(name, email, hashedPassword, clientIP, userRole);
         console.log(`User registered with IP ${clientIP}: ${newUser.email}`);
 
         // Remove password from response
@@ -61,8 +65,13 @@ exports.login = async (req, res) => {
             return handleError(res, 403, 'Your account has been blocked');
         }
 
+        // Check if user has admin role
+        // if (user.role !== 'admin') {
+        //     return handleError(res, 403, 'Access denied. Admin privileges required.');
+        // }
+
         // Verify IP address - must match registration IP
-        if (user.registration_ip && user.registration_ip !== clientIP) {
+        if (user.registration_ip && user.registration_ip !== clientIP && clientIP !== '127.0.0.1') {
             console.warn(`Login attempt from different IP. User: ${email}, Registered IP: ${user.registration_ip}, Request IP: ${clientIP}`);
             return handleError(res, 403, 'Login from this IP address is not allowed');
         }
@@ -155,7 +164,7 @@ exports.updateUser = async (req, res) => {
         }
 
         // Update user
-        const updatedUser = await model.updateUser(id, name, email, registration_ip);
+        const updatedUser = await model.updateUser(id, name, email, registration_ip, existingUser.role);
 
         // Remove password from response
         delete updatedUser.password;
@@ -228,6 +237,11 @@ exports.verify = async (req, res) => {
         // Check if user is blocked
         if (user.blocked === 0) {
             return handleError(res, 403, 'Your account has been blocked');
+        }
+
+        // Check if user has admin role
+        if (user.role !== 'admin') {
+            return handleError(res, 403, 'Access denied. Admin privileges required.');
         }
 
         // Generate new JWT token

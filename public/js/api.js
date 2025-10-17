@@ -147,40 +147,6 @@ const IPsAPI = {
     }
 };
 
-// Settings API
-const SettingsAPI = {
-    async getAll() {
-        return apiRequest('/settings/');
-    },
-
-    async getById(id) {
-        return apiRequest(`/settings/${id}`);
-    },
-
-    async getByKey(key) {
-        return apiRequest(`/settings/key/${key}`);
-    },
-
-    async create(key, value) {
-        return apiRequest('/settings/', {
-            method: 'POST',
-            body: JSON.stringify({ key, value })
-        });
-    },
-
-    async update(id, key, value) {
-        return apiRequest(`/settings/${id}`, {
-            method: 'PUT',
-            body: JSON.stringify({ key, value })
-        });
-    },
-
-    async delete(id) {
-        return apiRequest(`/settings/${id}`, {
-            method: 'DELETE'
-        });
-    }
-};
 
 // GPT Model API
 const GPTAPI = {
@@ -214,26 +180,61 @@ const GPTAPI = {
 // User Config API
 const ConfigAPI = {
     async getAllConfigs() {
-        return apiRequest('/config/all');
+        return apiRequest('/config/all', { skipAuth: true });
     },
 
     async getConfig(userEmail) {
-        return apiRequest(`/config/${encodeURIComponent(userEmail)}`);
+        return apiRequest(`/config/${encodeURIComponent(userEmail)}`, { skipAuth: true });
     },
 
     async getPrompt(userEmail) {
-        return apiRequest(`/config/prompt/${encodeURIComponent(userEmail)}`);
+        return apiRequest(`/config/prompt/${encodeURIComponent(userEmail)}`, { skipAuth: true });
     },
 
     async getResume(userEmail) {
-        return apiRequest(`/config/resume/${encodeURIComponent(userEmail)}`);
+        return apiRequest(`/config/resume/${encodeURIComponent(userEmail)}`, { skipAuth: true });
     },
 
     async getTemplate(userEmail) {
-        return apiRequest(`/config/template/${encodeURIComponent(userEmail)}`);
+        return apiRequest(`/config/template/${encodeURIComponent(userEmail)}`, { skipAuth: true });
     },
 
     async getFolder(userEmail) {
-        return apiRequest(`/config/folder/${encodeURIComponent(userEmail)}`);
+        return apiRequest(`/config/folder/${encodeURIComponent(userEmail)}`, { skipAuth: true });
+    }
+};
+
+// Jobs API
+const JobsAPI = {
+    async getAll(date = null) {
+        const url = date ? `/jobs/?date=${date}` : '/jobs/';
+        return apiRequest(url, { skipAuth: true });
+    },
+
+    async getById(id) {
+        return apiRequest(`/jobs/${id}`, { skipAuth: true });
+    },
+
+    async create(id, title, company, tech, url, description) {
+        return apiRequest('/jobs/', {
+            method: 'POST',
+            body: JSON.stringify({ id, title, company, tech, url, description }),
+            skipAuth: true
+        });
+    },
+
+    async update(id, title, company, tech, url, description) {
+        return apiRequest(`/jobs/${id}`, {
+            method: 'PUT',
+            body: JSON.stringify({ title, company, tech, url, description }),
+            skipAuth: true
+        });
+    },
+
+    async delete(id) {
+        return apiRequest(`/jobs/${id}`, {
+            method: 'DELETE',
+            skipAuth: true
+        });
     }
 };

@@ -9,6 +9,8 @@ exports.getSettings = async (req, res) => {
         const hiddenKeys = ['openai_api_key', 'selected_gpt_model'];
         const visibleSettings = settings.filter(setting => !hiddenKeys.includes(setting.key));
 
+        console.log(visibleSettings);
+
         res.status(200).json({
             settings: visibleSettings
         });

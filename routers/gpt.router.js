@@ -1,18 +1,18 @@
 const express = require('express');
 const { getAvailableModels, getSelectedModel, setSelectedModel, getApiKey, saveApiKey } = require('../controllers/gpt.controller');
-const { authenticate } = require('../utils/auth.middleware');
+const { authenticateAdmin } = require('../utils/auth.middleware');
 const router = express.Router();
 
-// All GPT model routes require authentication
+// All GPT model routes require admin authentication
 router.route('/models')
-    .get(authenticate, getAvailableModels);
+    .get(authenticateAdmin, getAvailableModels);
 
 router.route('/selected')
-    .get(authenticate, getSelectedModel)
-    .post(authenticate, setSelectedModel);
+    .get(authenticateAdmin, getSelectedModel)
+    .post(authenticateAdmin, setSelectedModel);
 
 router.route('/apikey')
-    .get(authenticate, getApiKey)
-    .post(authenticate, saveApiKey);
+    .get(authenticateAdmin, getApiKey)
+    .post(authenticateAdmin, saveApiKey);
 
 module.exports = router;
