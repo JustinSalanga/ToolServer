@@ -52,12 +52,12 @@ exports.getJob = async (req, res) => {
 }
 
 exports.createJob = async (req, res) => {
-    const { id, title, company, tech, url, description } = req.body;
+    const { title, company, tech, url, description } = req.body;
 
     try {
         // Validate required fields
-        if (!id || !title || !company) {
-            return handleError(res, 400, 'ID, title and company are required');
+        if (!title || !company) {
+            return handleError(res, 400, 'Title and company are required');
         }
 
         // Validate URL format if provided
@@ -71,15 +71,12 @@ exports.createJob = async (req, res) => {
             // Check if URL already exists using normalized URL
             const existingJob = await model.getJobByNormalizedUrl(url);
             if (existingJob) {
+                console.log(existingJob);
                 return handleError(res, 409, 'Job with this URL already exists');
             }
         }
 
-        // Check if job ID already exists
-        const existingJobById = await model.getJobById(id);
-        if (existingJobById) {
-            return handleError(res, 409, 'Job with this ID already exists');
-        }
+        // Note: Since we removed the ID field from createJob, we don't need to check for existing ID
 
         // Check if job with same title and company already exists
         // const existingJobByTitleCompany = await model.getJobByTitleAndCompany(title, company);
@@ -87,7 +84,7 @@ exports.createJob = async (req, res) => {
         //     return handleError(res, 409, 'Job with this title and company already exists');
         // }
 
-        const newJob = await model.createJob(id, title, company, tech, url, description);
+        const newJob = await model.createJob(title, company, tech, url, description);
 
         res.status(201).json({
             message: 'Job created successfully',

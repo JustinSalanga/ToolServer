@@ -1,6 +1,3 @@
-// API Configuration
-const API_BASE_URL = 'http://localhost:8085/api';
-
 // Storage keys
 const TOKEN_KEY = 'auth_token';
 const USER_KEY = 'auth_user';
@@ -45,7 +42,7 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     try {
-        const response = await fetch(`${API_BASE_URL}${endpoint}`, {
+        const response = await fetch(`http://${window.location.hostname}:8085/api${endpoint}`, {
             ...options,
             headers
         });

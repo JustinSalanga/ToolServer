@@ -1,4 +1,6 @@
 const db = require('./db');  // importing the module above
+const XLSX = require('xlsx');
+const fs = require('fs');
 
 exports.getUsers = async () => {
     const res = await db.query('SELECT * FROM users');
@@ -169,14 +171,14 @@ exports.saveFolder = async (userEmail, folderPath) => {
 exports.getJobs = async (date = null) => {
     let query = 'SELECT * FROM jobs';
     let params = [];
-    
+
     if (date) {
         query += ' WHERE DATE(created_at) = $1';
         params.push(date);
     }
-    
+
     query += ' ORDER BY created_at DESC';
-    
+
     const res = await db.query(query, params);
     return res.rows;
 }
@@ -200,28 +202,28 @@ exports.getJobByUrl = async (url) => {
 // URL normalization functions from bid_check.js
 function extractTargetUrl(url) {
     const urlObj = new URL(url);
-    
+
     // Handle known redirect patterns
     const redirectDomains = {
         'www.indeed.com': 'jk',
         'www.wiraa.com': 'source'
     };
-    
+
     if (redirectDomains[urlObj.hostname]) {
         const targetParam = redirectDomains[urlObj.hostname];
         const params = new URLSearchParams(urlObj.search);
-        
+
         // For Indeed, you might not get the full job URL, just job key
         if (redirectDomains[urlObj.hostname] === 'jk' && params.has('jk')) {
             return `https://${urlObj.hostname}/viewjob?jk=${params.get('jk')}`;
         }
-        
+
         if (params.has(targetParam)) {
             // Decode the redirect target
             return decodeURIComponent(params.get(targetParam));
         }
     }
-    
+
     // If not a known redirector, return the original with normalized query
     return normalizeQuery(url);
 }
@@ -229,70 +231,70 @@ function extractTargetUrl(url) {
 function normalizeQuery(url) {
     const urlObj = new URL(url);
     const params = new URLSearchParams(urlObj.search);
-    
+
     // Sort query parameters
     const sortedParams = new URLSearchParams();
     const sortedKeys = Array.from(params.keys()).sort();
-    
+
     for (const key of sortedKeys) {
         sortedParams.append(key, params.get(key));
     }
-    
+
     urlObj.search = sortedParams.toString();
     return urlObj.toString();
 }
 
 function normalizeFinalUrl(url) {
     const urlObj = new URL(url);
-    
+
     // Remove www. prefix and convert to lowercase
     let hostname = urlObj.hostname.toLowerCase().replace('www.', '');
     let pathname = urlObj.pathname.replace(/\/$/, ''); // Remove trailing slash
-    
+
     // Normalize query parameters
     const params = new URLSearchParams(urlObj.search);
     const sortedParams = new URLSearchParams();
     const sortedKeys = Array.from(params.keys()).sort();
-    
+
     for (const key of sortedKeys) {
         sortedParams.append(key, params.get(key));
     }
-    
+
     return `${urlObj.protocol}//${hostname}${pathname}?${sortedParams.toString()}`;
 }
 
 function clearLink(link) {
     link = String(link);
-    
+
     // Remove query parameters for certain domains
-    if (link.includes('?') && 
-        !link.includes('indeed') && 
-        !link.includes('builtin') && 
-        !link.includes('wellfound') && 
+    if (link.includes('?') &&
+        !link.includes('indeed') &&
+        !link.includes('builtin') &&
+        !link.includes('wellfound') &&
         !link.includes('wiraa')) {
         link = link.split('?')[0];
     }
-    
+
     // Remove trailing slash
     if (link.endsWith('/')) {
         link = link.slice(0, -1);
     }
-    
+
     // Remove /apply suffix
     if (link.endsWith('/apply')) {
         link = link.slice(0, -6);
     }
-    
+
     // Remove /application suffix
     if (link.endsWith('/application')) {
         link = link.slice(0, -12);
     }
-    
+
     // Handle Indeed URLs
     if (link.includes('www.indeed.com')) {
         link = extractTargetUrl(link);
     }
-    
+
     return link;
 }
 
@@ -326,12 +328,12 @@ exports.getJobByTitleAndCompany = async (title, company) => {
     return res.rows[0];
 }
 
-exports.createJob = async (jobId, title, company, tech, url, description) => {
+exports.createJob = async (title, company, tech, url, description) => {
     const normalizedUrl = url ? normalizeUrl(url) : null;
     const res = await db.query(
-        `INSERT INTO jobs (id, title, company, tech, url, normalized_url, description) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO jobs (title, company, tech, url, normalized_url, description) VALUES ($1, $2, $3, $4, $5, $6)
          RETURNING *`,
-        [jobId, title, company, tech, url, normalizedUrl, description]
+        [title, company, tech, url, normalizedUrl, description]
     );
     return res.rows[0];
 }
@@ -352,4 +354,102 @@ exports.deleteJob = async (jobId) => {
         [jobId]
     );
     return res.rows[0];
+}
+
+// Function to read bid.xlsx file and insert data into database
+exports.importBidData = async (filePath = 'bid.xlsx') => {
+    let client;
+    try {
+        // Check if file exists
+        if (!fs.existsSync(filePath)) {
+            throw new Error(`File not found: ${filePath}`);
+        }
+
+        // Get a single database client for the entire operation
+        client = await db.getClient();
+
+        // Read the Excel file
+        const workbook = XLSX.readFile(filePath);
+        const sheetName = workbook.SheetNames[0]; // Use first sheet
+        const worksheet = workbook.Sheets[sheetName];
+
+        // Convert to JSON
+        const data = XLSX.utils.sheet_to_json(worksheet);
+
+        console.log(`Processing ${data.length} rows from ${filePath}...`);
+
+        const results = {
+            totalRows: data.length,
+            inserted: 0,
+            skipped: 0,
+            errors: []
+        };
+
+        // Process each row
+        for (const row of data) {
+            try {
+                // Map Excel columns to database fields
+                const jobId = row.id ? parseInt(row.id) : null;
+                const title = row.title || null;
+                const company = row.company || null;
+                const tech = row.tech || null;
+                const url = row.url || null;
+                const description = row.description || null;
+                
+                // Convert Excel serial dates to proper timestamps
+                const convertExcelDate = (excelDate) => {
+                    if (!excelDate) return null;
+                    // Excel serial date: days since 1900-01-01 (with leap year bug)
+                    const excelEpoch = new Date(1900, 0, 1);
+                    const days = excelDate - 2; // Subtract 2 to account for Excel's leap year bug
+                    const date = new Date(excelEpoch.getTime() + days * 24 * 60 * 60 * 1000);
+                    return date.toISOString();
+                };
+                
+                const created_at = convertExcelDate(row.created_at);
+                const updated_at = convertExcelDate(row.updated_at);
+
+                // Insert into database
+                const normalizedUrl = url ? normalizeUrl(url) : null;
+                const insertResult = await client.query(
+                    `INSERT INTO jobs (title, company, tech, url, normalized_url, description, created_at, updated_at) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
+                    [title, company, tech, url, normalizedUrl, description, created_at, updated_at]
+                );
+                const insertedId = insertResult.rows[0].id;
+                results.inserted++;
+                console.log(`Inserted job ID ${insertedId}: ${title} at ${company}`);
+
+            } catch (error) {
+                results.errors.push({
+                    row: row.id || 'unknown',
+                    error: error.message
+                });
+                console.error(`Error processing row ${row.id}:`, error.message);
+            }
+        }
+
+        console.log(`\nImport completed:`);
+        console.log(`- Total rows processed: ${results.totalRows}`);
+        console.log(`- Successfully inserted: ${results.inserted}`);
+        console.log(`- Skipped: ${results.skipped}`);
+        console.log(`- Errors: ${results.errors.length}`);
+
+        if (results.errors.length > 0) {
+            console.log('\nErrors encountered:');
+            results.errors.forEach(err => {
+                console.log(`  Row ${err.row}: ${err.error}`);
+            });
+        }
+
+        return results;
+
+    } catch (error) {
+        console.error('Error importing bid data:', error.message);
+        throw error;
+    } finally {
+        // Always release the client back to the pool
+        if (client) {
+            client.release();
+        }
+    }
 }

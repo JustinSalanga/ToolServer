@@ -37,7 +37,7 @@ const morgan = require('morgan');
     const { setupDatabase } = require('./database/setup');
 
     const app = express();
-    const PORT = process.env.PORT || 3000;
+    const PORT = process.env.PORT || 8085;
 
     // Middleware
     app.use(morgan('dev')); // HTTP request logger
@@ -77,9 +77,25 @@ const morgan = require('morgan');
 
     // Initialize database and start server
     setupDatabase().then(() => {
-        app.listen(PORT, () => {
+        const server = app.listen(PORT, () => {
             console.log(`🚀 Server is running on port ${PORT}`);
         });
+        
+        // Handle server errors
+        server.on('error', (err) => {
+            console.error('Server error:', err);
+        });
+        
+        // Handle uncaught exceptions
+        process.on('uncaughtException', (err) => {
+            console.error('Uncaught Exception:', err);
+        });
+        
+        // Handle unhandled promise rejections
+        process.on('unhandledRejection', (reason, promise) => {
+            console.error('Unhandled Rejection at:', promise, 'reason:', reason);
+        });
+        
     }).catch(err => {
         console.error('Failed to setup database:', err);
         process.exit(1);

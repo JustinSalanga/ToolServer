@@ -82,28 +82,16 @@ async function setupDatabase() {
         `);
         await appClient.query(`
             CREATE TABLE IF NOT EXISTS jobs (
-                id INT PRIMARY KEY,
+                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
                 title VARCHAR(200) NOT NULL,
-                company VARCHAR(200) NOT NULL,
+                company VARCHAR(200),
                 tech VARCHAR(500),
-                url VARCHAR(500),
-                normalized_url VARCHAR(500),
+                url TEXT,
+                normalized_url TEXT,
                 description TEXT,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
-        `);
-        
-        // Add normalized_url column if it doesn't exist (migration)
-        await appClient.query(`
-            ALTER TABLE jobs 
-            ADD COLUMN IF NOT EXISTS normalized_url VARCHAR(500);
-        `);
-        
-        // Create index on normalized_url for better performance
-        await appClient.query(`
-            CREATE INDEX IF NOT EXISTS idx_jobs_normalized_url 
-            ON jobs(normalized_url);
         `);
         
         // console.log('🧩 Tables created successfully!');
