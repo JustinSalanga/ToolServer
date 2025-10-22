@@ -15,17 +15,17 @@ const morgan = require('morgan');
     }
 
     // Startup authentication check
-    // const { authenticateStartup } = require('./utils/startup-auth');
-    // const startupPassword = process.env.STARTUP_PASSWORD || '';
-    // const isHashed = process.env.STARTUP_PASSWORD_HASHED === 'true';
-    // const maxAttempts = parseInt(process.env.STARTUP_MAX_ATTEMPTS || '3', 10);
+    const { authenticateStartup } = require('./utils/startup-auth');
+    const startupPassword = process.env.STARTUP_PASSWORD || '';
+    const isHashed = process.env.STARTUP_PASSWORD_HASHED === 'true';
+    const maxAttempts = parseInt(process.env.STARTUP_MAX_ATTEMPTS || '3', 10);
 
-    // const authenticated = await authenticateStartup(startupPassword, isHashed, maxAttempts);
+    const authenticated = await authenticateStartup(startupPassword, isHashed, maxAttempts);
 
-    // if (!authenticated) {
-    //     console.error('❌ Startup authentication failed');
-    //     process.exit(1);
-    // }
+    if (!authenticated) {
+        console.error('❌ Startup authentication failed');
+        process.exit(1);
+    }
 
     const passport = require('./config/passport');
     const authRouter = require('./routers/auth.router');

@@ -57,12 +57,12 @@ exports.getJob = async (req, res) => {
 }
 
 exports.createJob = async (req, res) => {
-    const { title, company, tech, url, description } = req.body;
+    const { title, company, tech, url, description, date } = req.body;
 
     try {
         // Validate required fields
-        if (!title || !company) {
-            return handleError(res, 400, 'Title and company are required');
+        if (!title || !company || !date) {
+            return handleError(res, 400, 'Title, company and date are required');
         }
 
         // Validate URL format if provided
@@ -89,7 +89,7 @@ exports.createJob = async (req, res) => {
         //     return handleError(res, 409, 'Job with this title and company already exists');
         // }
 
-        const newJob = await model.createJob(title, company, tech, url, description);
+        const newJob = await model.createJob(title, company, tech, url, description, date);
 
         res.status(201).json({
             message: 'Job created successfully',

@@ -175,12 +175,10 @@ exports.getJobs = async (date = null, page = 1, limit = 20) => {
     let countParams = [];
 
     if (date) {
-        const startDate = `${date}T00:00:00.000Z`;
-        const endDate = `${date}T23:59:59.999Z`;
-        query += ` WHERE created_at >= $1 AND created_at <= $2`;
-        countQuery += ` WHERE created_at >= $1 AND created_at <= $2`;
-        params.push(startDate, endDate);
-        countParams = [startDate, endDate];
+        query += ` WHERE date = $1`;
+        countQuery += ` WHERE date = $1`;
+        params.push(date);
+        countParams = [date];
     }
 
     query += ' ORDER BY id DESC';
@@ -188,7 +186,7 @@ exports.getJobs = async (date = null, page = 1, limit = 20) => {
     // Add pagination
     const offset = (page - 1) * limit;
     if (date) {
-        query += ` LIMIT $3 OFFSET $4`;
+        query += ` LIMIT $2 OFFSET $3`;
         params.push(limit, offset);
     } else {
         query += ` LIMIT $1 OFFSET $2`;
@@ -212,11 +210,9 @@ exports.getJobs = async (date = null, page = 1, limit = 20) => {
 }
 
 exports.getJobsByDate = async (date) => {
-    const startDate = `${date}T00:00:00.000Z`;
-    const endDate = `${date}T23:59:59.999Z`;
     const res = await db.query(
-        'SELECT * FROM jobs WHERE created_at >= $1 AND created_at <= $2 ORDER BY id ASC',
-        [startDate, endDate]
+        'SELECT * FROM jobs WHERE date = $1 ORDER BY id ASC',
+        [date]
     );
     return res.rows;
 }
@@ -366,12 +362,12 @@ exports.getJobByTitleAndCompany = async (title, company) => {
     return res.rows[0];
 }
 
-exports.createJob = async (title, company, tech, url, description) => {
+exports.createJob = async (title, company, tech, url, description, date) => {
     const normalizedUrl = url ? normalizeUrl(url) : null;
     const res = await db.query(
-        `INSERT INTO jobs (title, company, tech, url, normalized_url, description) VALUES ($1, $2, $3, $4, $5, $6)
+        `INSERT INTO jobs (title, company, tech, url, normalized_url, description, date) VALUES ($1, $2, $3, $4, $5, $6, $7)
          RETURNING *`,
-        [title, company, tech, url, normalizedUrl, description]
+        [title, company, tech, url, normalizedUrl, description, date]
     );
     return res.rows[0];
 }

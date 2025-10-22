@@ -957,6 +957,7 @@ function renderJobs(jobs) {
                     '<em>No description</em>'
                 }
             </td>
+            <td>${new Date(job.date).toLocaleDateString()}</td>
             <td>${new Date(job.created_at).toLocaleDateString()}</td>
             <td>
                 <div class="btn-group">

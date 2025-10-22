@@ -89,6 +89,7 @@ async function setupDatabase() {
                 url TEXT,
                 normalized_url TEXT,
                 description TEXT,
+                date DATE NOT NULL,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
