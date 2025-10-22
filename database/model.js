@@ -168,18 +168,56 @@ exports.saveFolder = async (userEmail, folderPath) => {
 }
 
 // Job Management Functions
-exports.getJobs = async (date = null) => {
+exports.getJobs = async (date = null, page = 1, limit = 20) => {
     let query = 'SELECT * FROM jobs';
+    let countQuery = 'SELECT COUNT(*) as total FROM jobs';
     let params = [];
+    let countParams = [];
 
     if (date) {
-        query += ' WHERE DATE(created_at) = $1';
-        params.push(date);
+        const startDate = `${date}T00:00:00.000Z`;
+        const endDate = `${date}T23:59:59.999Z`;
+        query += ` WHERE created_at >= $1 AND created_at <= $2`;
+        countQuery += ` WHERE created_at >= $1 AND created_at <= $2`;
+        params.push(startDate, endDate);
+        countParams = [startDate, endDate];
     }
 
-    query += ' ORDER BY created_at DESC';
+    query += ' ORDER BY id DESC';
 
-    const res = await db.query(query, params);
+    // Add pagination
+    const offset = (page - 1) * limit;
+    if (date) {
+        query += ` LIMIT $3 OFFSET $4`;
+        params.push(limit, offset);
+    } else {
+        query += ` LIMIT $1 OFFSET $2`;
+        params.push(limit, offset);
+    }
+
+    const [jobsRes, countRes] = await Promise.all([
+        db.query(query, params),
+        db.query(countQuery, countParams)
+    ]);
+
+    return {
+        jobs: jobsRes.rows,
+        pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: parseInt(countRes.rows[0].total),
+            totalPages: Math.ceil(parseInt(countRes.rows[0].total) / limit)
+        }
+    };
+}
+
+exports.getJobsByDate = async (date) => {
+    const startDate = `${date}T00:00:00.000Z`;
+    const endDate = `${date}T23:59:59.999Z`;
+    const res = await db.query(
+        'SELECT * FROM jobs WHERE created_at >= $1 AND created_at <= $2 ORDER BY id ASC',
+        [startDate, endDate]
+    );
     return res.rows;
 }
 

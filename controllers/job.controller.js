@@ -3,11 +3,12 @@ const { handleError } = require('../utils/utils');
 
 exports.getJobs = async (req, res) => {
     try {
-        const { date } = req.query;
-        const jobs = await model.getJobs(date);
+        const { date, page = 1, limit = 20 } = req.query;
+        const result = await model.getJobs(date, page, limit);
 
         res.status(200).json({
-            jobs
+            jobs: result.jobs,
+            pagination: result.pagination
         });
     } catch (error) {
         console.error('Get jobs error:', error);
@@ -19,7 +20,7 @@ exports.getTodayJobs = async (req, res) => {
     try {
         // Get today's date in YYYY-MM-DD format
         const today = new Date().toISOString().split('T')[0];
-        const jobs = await model.getJobs(today);
+        const jobs = await model.getJobsByDate(today);
 
         res.status(200).json({
             date: today,

@@ -240,7 +240,7 @@
                             <option value="">All Dates</option>
                         </select>
                         <button onclick="clearDateFilter()" class="btn btn-secondary">🗑️ Clear Date</button>
-                        <button onclick="loadJobs()" class="btn btn-secondary">🔄 Refresh</button>
+                        <button onclick="loadJobs(currentDateFilter, jobsCurrentPage, pageSize)" class="btn btn-secondary">🔄 Refresh</button>
                     </div>
 
                     <div class="table-container">
@@ -263,6 +263,29 @@
                                 </tr>
                             </tbody>
                         </table>
+                        
+                        <!-- Pagination Controls -->
+                        <div id="jobsPagination" class="pagination-container" style="display: none;">
+                            <div class="pagination-info">
+                                <span id="paginationInfo">Showing 0-0 of 0</span>
+                            </div>
+                            <div class="pagination-controls">
+                                <button id="firstPage" class="btn btn-secondary btn-sm" onclick="goToPage(1)">First</button>
+                                <button id="prevPage" class="btn btn-secondary btn-sm" onclick="goToPreviousPage()">Previous</button>
+                                <span id="pageNumbers" class="page-numbers"></span>
+                                <button id="nextPage" class="btn btn-secondary btn-sm" onclick="goToNextPage()">Next</button>
+                                <button id="lastPage" class="btn btn-secondary btn-sm" onclick="goToLastPage()">Last</button>
+                            </div>
+                            <div class="pagination-settings">
+                                <label for="pageSize">Items per page:</label>
+                                <select id="pageSize" onchange="changePageSize()">
+                                    <option value="10">10</option>
+                                    <option value="20" selected>20</option>
+                                    <option value="50">50</option>
+                                    <option value="100">100</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>

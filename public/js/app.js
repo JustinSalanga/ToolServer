@@ -295,8 +295,12 @@ function showPage(pageName, updateHash = true) {
     if (pageName === 'jobs') {
         initializeDateFilter();
         // Load jobs with today's date as default
-        const today = new Date().toISOString().split('T')[0];
-        loadJobs(today);
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const isoDate = `${year}-${month}-${day}`;
+        loadJobs(isoDate);
     }
 }
 
@@ -868,14 +872,27 @@ async function viewConfig(userEmail) {
 
 // ========== JOBS MANAGEMENT ==========
 
-async function loadJobs(date = null) {
+// Pagination state
+let jobsCurrentPage = 1;
+let pageSize = 20;
+let totalPages = 1;
+let totalJobs = 0;
+let currentDateFilter = null;
+
+async function loadJobs(date = null, page = 1, limit = 20) {
     const tbody = document.getElementById('jobsTableBody');
     tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading jobs...</td></tr>';
 
     try {
-        const data = await JobsAPI.getAll(date);
+        const data = await JobsAPI.getAll(date, page, limit);
         jobsData = data.jobs || [];
+        jobsCurrentPage = data.pagination.page;
+        totalPages = data.pagination.totalPages;
+        totalJobs = data.pagination.total;
+        currentDateFilter = date;
+        
         renderJobs(jobsData);
+        updatePaginationControls();
     } catch (error) {
         // Check if it's an auth error (user already redirected to login)
         if (error.message.includes('Session expired')) {
@@ -897,10 +914,12 @@ function initializeDateFilter() {
         const date = new Date(today);
         date.setDate(today.getDate() - i);
         
+        // Use local date for both display and value to ensure consistency
+        const year = date.getFullYear();
         const month = String(date.getMonth() + 1).padStart(2, '0');
         const day = String(date.getDate()).padStart(2, '0');
         const dateString = `${month}.${day}`;
-        const isoDate = date.toISOString().split('T')[0];
+        const isoDate = `${year}-${month}-${day}`;
         
         const option = document.createElement('option');
         option.value = isoDate;
@@ -978,17 +997,90 @@ function filterJobs() {
 
 function filterJobsByDate() {
     const dateFilter = document.getElementById('jobDateFilter').value;
+    jobsCurrentPage = 1; // Reset to first page when filtering
     if (dateFilter) {
-        loadJobs(dateFilter);
+        loadJobs(dateFilter, 1, pageSize);
     } else {
-        loadJobs();
+        loadJobs(null, 1, pageSize);
     }
 }
 
 function clearDateFilter() {
     const dateSelect = document.getElementById('jobDateFilter');
     dateSelect.value = '';
-    loadJobs();
+    jobsCurrentPage = 1; // Reset to first page when clearing filter
+    loadJobs(null, 1, pageSize);
+}
+
+// Pagination functions
+function updatePaginationControls() {
+    const paginationContainer = document.getElementById('jobsPagination');
+    const paginationInfo = document.getElementById('paginationInfo');
+    const pageNumbers = document.getElementById('pageNumbers');
+    
+    if (totalJobs === 0) {
+        paginationContainer.style.display = 'none';
+        return;
+    }
+    
+    paginationContainer.style.display = 'flex';
+    
+    // Update pagination info
+    const startItem = (jobsCurrentPage - 1) * pageSize + 1;
+    const endItem = Math.min(jobsCurrentPage * pageSize, totalJobs);
+    paginationInfo.textContent = `Showing ${startItem}-${endItem} of ${totalJobs}`;
+    
+    // Update page numbers
+    pageNumbers.innerHTML = '';
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, jobsCurrentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+        startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+        const pageBtn = document.createElement('span');
+        pageBtn.className = `page-number ${i === jobsCurrentPage ? 'active' : ''}`;
+        pageBtn.textContent = i;
+        pageBtn.onclick = () => goToPage(i);
+        pageNumbers.appendChild(pageBtn);
+    }
+    
+    // Update button states
+    document.getElementById('firstPage').disabled = jobsCurrentPage === 1;
+    document.getElementById('prevPage').disabled = jobsCurrentPage === 1;
+    document.getElementById('nextPage').disabled = jobsCurrentPage === totalPages;
+    document.getElementById('lastPage').disabled = jobsCurrentPage === totalPages;
+}
+
+function goToPage(page) {
+    if (page < 1 || page > totalPages || page === jobsCurrentPage) return;
+    loadJobs(currentDateFilter, page, pageSize);
+}
+
+function goToPreviousPage() {
+    if (jobsCurrentPage > 1) {
+        goToPage(jobsCurrentPage - 1);
+    }
+}
+
+function goToNextPage() {
+    if (jobsCurrentPage < totalPages) {
+        goToPage(jobsCurrentPage + 1);
+    }
+}
+
+function goToLastPage() {
+    goToPage(totalPages);
+}
+
+function changePageSize() {
+    const newPageSize = parseInt(document.getElementById('pageSize').value);
+    pageSize = newPageSize;
+    jobsCurrentPage = 1; // Reset to first page
+    loadJobs(currentDateFilter, 1, pageSize);
 }
 
 function showAddJobModal() {
