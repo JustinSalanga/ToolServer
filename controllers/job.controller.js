@@ -19,8 +19,12 @@ exports.getJobs = async (req, res) => {
 exports.getTodayJobs = async (req, res) => {
     try {
         // Get today's date in YYYY-MM-DD format
-        const today = new Date().toISOString().split('T')[0];
-        const jobs = await model.getJobsByDate(today);
+        const today = new Date();
+        const year = today.getFullYear();
+        const month = String(today.getMonth() + 1).padStart(2, '0');
+        const day = String(today.getDate()).padStart(2, '0');
+        const isoDate = `${year}-${month}-${day}`;
+        const jobs = await model.getJobsByDate(isoDate);
 
         res.status(200).json({
             date: today,
