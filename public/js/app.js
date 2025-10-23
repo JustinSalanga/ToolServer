@@ -879,12 +879,12 @@ let totalPages = 1;
 let totalJobs = 0;
 let currentDateFilter = null;
 
-async function loadJobs(date = null, page = 1, limit = 20) {
+async function loadJobs(date = null, page = 1, limit = 20, orderDirection = 'DESC') {
     const tbody = document.getElementById('jobsTableBody');
     tbody.innerHTML = '<tr><td colspan="8" class="loading">Loading jobs...</td></tr>';
 
     try {
-        const data = await JobsAPI.getAll(date, page, limit);
+        const data = await JobsAPI.getAll(date, page, limit, null, orderDirection);
         jobsData = data.jobs || [];
         jobsCurrentPage = data.pagination.page;
         totalPages = data.pagination.totalPages;
@@ -906,13 +906,20 @@ function initializeDateFilter() {
     const dateSelect = document.getElementById('jobDateFilter');
     const today = new Date();
     
-    // Clear existing options except "All Dates"
-    dateSelect.innerHTML = '<option value="">All Dates</option>';
+    // Clear existing options
+    dateSelect.innerHTML = '';
     
-    // Generate options for the last 30 days
-    for (let i = 0; i < 30; i++) {
+    // Add "All Dates" option
+    const allDatesOption = document.createElement('option');
+    allDatesOption.value = '';
+    allDatesOption.textContent = 'All dates';
+    allDatesOption.selected = true; // Set as default
+    dateSelect.appendChild(allDatesOption);
+    
+    // Generate options for the range from today +2 to today -30
+    for (let i = 2; i >= -30; i--) {
         const date = new Date(today);
-        date.setDate(today.getDate() - i);
+        date.setDate(today.getDate() + i);
         
         // Use local date for both display and value to ensure consistency
         const year = date.getFullYear();
@@ -924,11 +931,6 @@ function initializeDateFilter() {
         const option = document.createElement('option');
         option.value = isoDate;
         option.textContent = dateString;
-        
-        // Set today as default
-        if (i === 0) {
-            option.selected = true;
-        }
         
         dateSelect.appendChild(option);
     }
@@ -1211,32 +1213,134 @@ async function deleteJob(id) {
     }
 }
 
+// ========== COPY TODAY JOBS ==========
+
+// Fallback clipboard function for older browsers
+async function copyToClipboardFallback(text) {
+    return new Promise((resolve, reject) => {
+        // Create a temporary textarea element
+        const textarea = document.createElement('textarea');
+        textarea.value = text;
+        textarea.style.position = 'fixed';
+        textarea.style.left = '-999999px';
+        textarea.style.top = '-999999px';
+        document.body.appendChild(textarea);
+        
+        try {
+            // Select and copy the text
+            textarea.focus();
+            textarea.select();
+            const successful = document.execCommand('copy');
+            
+            // Clean up
+            document.body.removeChild(textarea);
+            
+            if (successful) {
+                resolve();
+            } else {
+                reject(new Error('Failed to copy text'));
+            }
+        } catch (err) {
+            // Clean up
+            document.body.removeChild(textarea);
+            reject(err);
+        }
+    });
+}
+
+async function copyTodayJobs() {
+    try {
+        // Get current search and date filters
+        const searchText = document.getElementById('jobSearch').value.trim();
+        const dateFilter = currentDateFilter;
+        
+        // Fetch all jobs from server with search and date filters, sorted by ID ASC
+        const data = await JobsAPI.getAll(dateFilter, 1, 10000, searchText, 'ASC');
+        const jobsToCopy = data.jobs || [];
+        
+        if (jobsToCopy.length === 0) {
+            showAlert('No jobs to copy. Please add some jobs first.', 'No Data');
+            return;
+        }
+        
+        // Format data for Excel pasting (tab-separated values)
+        const headers = ['Job ID', 'Title', 'Company', 'Tech Stack', 'URL', 'Description', 'Date', 'Created At', 'Updated At'];
+        const csvData = [headers];
+        
+        jobsToCopy.forEach(job => {
+            // Clean and format description for Excel
+            let description = job.description || '';
+            // Replace multiple newlines with single newline
+            description = description.replace(/\n\s*\n/g, '\n');
+            // Replace single newlines with spaces to prevent cell overflow
+            description = description.replace(/\n/g, ' ');
+            // Remove extra whitespace
+            description = description.replace(/\s+/g, ' ').trim();
+            // Limit description length to prevent Excel issues
+            // if (description.length > 500) {
+            //     description = description.substring(0, 500) + '...';
+            // }
+            
+            const row = [
+                job.id,
+                job.title,
+                job.company,
+                job.tech || '',
+                job.url || '',
+                description,
+                job.date || '',
+                new Date(job.created_at).toLocaleString(),
+                new Date(job.updated_at).toLocaleString()
+            ];
+            csvData.push(row);
+        });
+        
+        // Convert to tab-separated string for Excel pasting
+        const tsvContent = csvData.map(row => 
+            row.map(cell => {
+                // Escape quotes and wrap in quotes if contains tab, newline, or quote
+                const cellStr = String(cell);
+                if (cellStr.includes('\t') || cellStr.includes('\n') || cellStr.includes('"')) {
+                    return '"' + cellStr.replace(/"/g, '""') + '"';
+                }
+                return cellStr;
+            }).join('\t')
+        ).join('\n');
+        
+        // Copy to clipboard with fallback for older browsers
+        try {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                // Modern clipboard API
+                await navigator.clipboard.writeText(tsvContent);
+            } else {
+                // Fallback for older browsers or non-HTTPS environments
+                await copyToClipboardFallback(tsvContent);
+            }
+            
+            showAlert(`Successfully copied ${jobsToCopy.length} jobs to clipboard. You can now paste them into Excel.`, 'Copy Complete');
+        } catch (clipboardError) {
+            console.error('Clipboard error:', clipboardError);
+            showAlert('Error copying to clipboard. Please try again or copy manually.', 'Copy Failed');
+        }
+        
+    } catch (error) {
+        console.error('Copy jobs error:', error);
+        showAlert('Error copying jobs: ' + error.message, 'Copy Failed');
+    }
+}
+
 // ========== EXCEL EXPORT ==========
 
-function exportJobsToExcel() {
+async function exportJobsToExcel() {
     try {
-        // Get the currently displayed jobs (filtered data)
-        const searchText = document.getElementById('jobSearch').value.toLowerCase();
-        const dateFilter = document.getElementById('jobDateFilter').value;
+        // Get current search and date filters
+        const searchText = document.getElementById('jobSearch').value.trim();
+        const dateFilter = currentDateFilter;
         
-        let jobsToExport = jobsData;
-        
-        // Apply the same filters as the UI
-        if (searchText) {
-            jobsToExport = jobsToExport.filter(job =>
-                job.title.toLowerCase().includes(searchText) ||
-                job.company.toLowerCase().includes(searchText) ||
-                (job.tech && job.tech.toLowerCase().includes(searchText)) ||
-                (job.description && job.description.toLowerCase().includes(searchText))
-            );
-        }
-        
-        if (dateFilter) {
-            jobsToExport = jobsToExport.filter(job => {
-                const jobDate = new Date(job.created_at).toISOString().split('T')[0];
-                return jobDate === dateFilter;
-            });
-        }
+        // Fetch all jobs from server with search and date filters
+        // Use a large limit to get all matching jobs, sorted by ID ASC
+        const data = await JobsAPI.getAll(dateFilter, 1, 10000, searchText, 'ASC');
+        const jobsToExport = data.jobs || [];
         
         if (jobsToExport.length === 0) {
             showAlert('No jobs to export. Please add some jobs first.', 'No Data');
@@ -1251,6 +1355,7 @@ function exportJobsToExcel() {
             'Tech Stack': job.tech || '',
             'URL': job.url || '',
             'Description': job.description || '',
+            'Date': job.date || '',
             'Created At': new Date(job.created_at).toLocaleString(),
             'Updated At': new Date(job.updated_at).toLocaleString()
         }));
@@ -1267,6 +1372,7 @@ function exportJobsToExcel() {
             { wch: 25 },  // Tech Stack
             { wch: 40 },  // URL
             { wch: 50 },  // Description
+            { wch: 12 },  // Date
             { wch: 20 },  // Created At
             { wch: 20 }   // Updated At
         ];
@@ -1275,9 +1381,16 @@ function exportJobsToExcel() {
         // Add worksheet to workbook
         XLSX.utils.book_append_sheet(wb, ws, 'Jobs');
         
-        // Generate filename with current date
+        // Generate filename with current date and filters
         const currentDate = new Date().toISOString().split('T')[0];
-        const filename = `jobs_export_${currentDate}.xlsx`;
+        let filename = `jobs_export_${currentDate}`;
+        if (dateFilter) {
+            filename += `_${dateFilter}`;
+        }
+        if (searchText) {
+            filename += `_search_${searchText.replace(/[^a-zA-Z0-9]/g, '_')}`;
+        }
+        filename += '.xlsx';
         
         // Save the file
         XLSX.writeFile(wb, filename);

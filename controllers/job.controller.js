@@ -3,8 +3,8 @@ const { handleError } = require('../utils/utils');
 
 exports.getJobs = async (req, res) => {
     try {
-        const { date, page = 1, limit = 20 } = req.query;
-        const result = await model.getJobs(date, page, limit);
+        const { date, page = 1, limit = 20, search, orderDirection = 'ASC' } = req.query;
+        const result = await model.getJobs(date, page, limit, search, orderDirection);
 
         res.status(200).json({
             jobs: result.jobs,

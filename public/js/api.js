@@ -203,11 +203,13 @@ const ConfigAPI = {
 
 // Jobs API
 const JobsAPI = {
-    async getAll(date = null, page = 1, limit = 20) {
+    async getAll(date = null, page = 1, limit = 20, search = null, orderDirection = 'ASC') {
         const params = new URLSearchParams();
         if (date) params.append('date', date);
+        if (search) params.append('search', search);
         params.append('page', page);
         params.append('limit', limit);
+        params.append('orderDirection', orderDirection);
         
         const url = `/jobs/?${params.toString()}`;
         return apiRequest(url, { skipAuth: true });

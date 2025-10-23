@@ -168,30 +168,41 @@ exports.saveFolder = async (userEmail, folderPath) => {
 }
 
 // Job Management Functions
-exports.getJobs = async (date = null, page = 1, limit = 20) => {
+exports.getJobs = async (date = null, page = 1, limit = 20, search = null, orderDirection = 'ASC') => {
     let query = 'SELECT * FROM jobs';
     let countQuery = 'SELECT COUNT(*) as total FROM jobs';
     let params = [];
     let countParams = [];
+    let whereConditions = [];
 
     if (date) {
-        query += ` WHERE date = $1`;
-        countQuery += ` WHERE date = $1`;
+        whereConditions.push('date = $' + (params.length + 1));
         params.push(date);
-        countParams = [date];
+        countParams.push(date);
     }
 
-    query += ' ORDER BY id DESC';
+    if (search) {
+        const searchParam = '$' + (params.length + 1);
+        whereConditions.push(`(title ILIKE ${searchParam} OR company ILIKE ${searchParam} OR tech ILIKE ${searchParam} OR description ILIKE ${searchParam})`);
+        params.push(`%${search}%`);
+        countParams.push(`%${search}%`);
+    }
+
+    if (whereConditions.length > 0) {
+        const whereClause = ' WHERE ' + whereConditions.join(' AND ');
+        query += whereClause;
+        countQuery += whereClause;
+    }
+
+    // Validate and set order direction
+    const validDirections = ['ASC', 'DESC'];
+    const direction = validDirections.includes(orderDirection.toUpperCase()) ? orderDirection.toUpperCase() : 'ASC';
+    query += ` ORDER BY id ${direction}`;
 
     // Add pagination
     const offset = (page - 1) * limit;
-    if (date) {
-        query += ` LIMIT $2 OFFSET $3`;
-        params.push(limit, offset);
-    } else {
-        query += ` LIMIT $1 OFFSET $2`;
-        params.push(limit, offset);
-    }
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
 
     const [jobsRes, countRes] = await Promise.all([
         db.query(query, params),
