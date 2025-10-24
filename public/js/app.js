@@ -87,14 +87,27 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // Check authentication
-function checkAuth() {
+async function checkAuth() {
     const token = getToken();
     const user = getUser();
     const currentHash = window.location.hash.substring(1);
     const publicPages = ['configs', 'jobs'];
 
     if (token && user) {
-        showDashboard(user);
+        try {
+            // Verify admin token is still valid
+            await AdminAuthAPI.verify();
+            showDashboard(user);
+        } catch (error) {
+            console.error('Token verification failed:', error);
+            AdminAuthAPI.logout();
+            if (publicPages.includes(currentHash)) {
+                showPublicView();
+            } else {
+                showLoginView();
+                window.location.hash = '#login';
+            }
+        }
     } else if (publicPages.includes(currentHash)) {
         // User is on a public page - show it without authentication
         showPublicView();
@@ -324,7 +337,7 @@ async function handleLogin(event) {
     const errorDiv = document.getElementById('loginError');
 
     try {
-        const data = await AuthAPI.login(email, password);
+        const data = await AdminAuthAPI.login(email, password);
         showDashboard(data.user);
     } catch (error) {
         errorDiv.textContent = error.message;
@@ -352,8 +365,8 @@ async function handleRegister(event) {
     const errorDiv = document.getElementById('registerError');
 
     try {
-        await AuthAPI.register(name, email, password, confirm_password);
-        await showAlert('Registration successful! Please login.', 'Success');
+        await AdminAuthAPI.register(name, email, password, confirm_password);
+        await showAlert('Admin registration successful! Please login.', 'Success');
         showLogin();
     } catch (error) {
         errorDiv.textContent = error.message;
@@ -362,7 +375,7 @@ async function handleRegister(event) {
 }
 
 function logout() {
-    AuthAPI.logout();
+    AdminAuthAPI.logout();
     // Clear hash and show login view
     window.location.hash = '#login';
     showLoginView();
@@ -1158,6 +1171,10 @@ function editJob(id) {
                 <input type="text" id="editJobCompany" value="${job.company}" required>
             </div>
             <div class="form-group">
+                <label>Date *</label>
+                <input type="date" id="editJobDate" value="${job.date || ''}" required>
+            </div>
+            <div class="form-group">
                 <label>Tech Stack</label>
                 <input type="text" id="editJobTech" value="${job.tech || ''}" placeholder="React, Node.js, PostgreSQL">
             </div>
@@ -1180,12 +1197,13 @@ async function updateJob(event, id) {
 
     const title = document.getElementById('editJobTitle').value;
     const company = document.getElementById('editJobCompany').value;
+    const date = document.getElementById('editJobDate').value;
     const tech = document.getElementById('editJobTech').value;
     const url = document.getElementById('editJobUrl').value;
     const description = document.getElementById('editJobDescription').value;
 
     try {
-        await JobsAPI.update(id, title, company, tech, url, description);
+        await JobsAPI.update(id, title, company, date, tech, url, description);
         closeModal();
         loadJobs();
         await showAlert('Job updated successfully!', 'Success');

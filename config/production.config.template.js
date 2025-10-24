@@ -18,9 +18,11 @@ module.exports = {
     NODE_ENV: 'production',
 
     // JWT Configuration
-    // IMPORTANT: Generate a strong secret key for production!
+    // IMPORTANT: Generate strong secret keys for production!
     // Generate one with: node -e "console.log(require('crypto').randomBytes(64).toString('hex'))"
     JWT_SECRET: 'CHANGE-THIS-TO-A-STRONG-RANDOM-SECRET',
+    JWT_ADMIN_SECRET: '75b97d33464a2b2474421f0e033fb23a6bb198f0d5ac63609e000c32443759e73b49e80596ca279e712a5443f0fa967ec0beafef5382fd85a5d91d862a22632f',
+    JWT_USER_SECRET: 'a29f1a79fd0558c6883cfe65a1aa1d81b19056f35275ba2c3985b6684eedcc165c23511613b3c0c43cfe0e092ad97fbb4f072a2189e151033234e2e0bf5b2767',
     JWT_EXPIRES_IN: '24h',
 
     // PostgreSQL Database Configuration

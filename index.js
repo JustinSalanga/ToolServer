@@ -29,6 +29,8 @@ const morgan = require('morgan');
 
     const passport = require('./config/passport');
     const authRouter = require('./routers/auth.router');
+    const adminAuthRouter = require('./routers/admin-auth.router');
+    const userAuthRouter = require('./routers/user-auth.router');
     const ipLookupRouter = require('./routers/ip-lookup.router');
     const gptRouter = require('./routers/gpt.router');
     const configRouter = require('./routers/config.router');
@@ -52,7 +54,9 @@ const morgan = require('morgan');
     app.use(express.static(path.join(__dirname, 'public')));
 
     // API Routes
-    app.use('/api/auth', authRouter);
+    app.use('/api/auth', authRouter); // Legacy auth routes
+    app.use('/api/admin', adminAuthRouter); // Admin authentication routes
+    app.use('/api/user', userAuthRouter); // User authentication routes
     app.use('/api/ips', ipLookupRouter);
     app.use('/api/gpt', gptRouter);
     app.use('/api/config', configRouter);

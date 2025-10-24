@@ -76,7 +76,41 @@ async function apiRequest(endpoint, options = {}) {
     }
 }
 
-// Auth API
+// Admin Auth API
+const AdminAuthAPI = {
+    async register(name, email, password, confirm_password) {
+        return apiRequest('/admin/register', {
+            method: 'POST',
+            body: JSON.stringify({ name, email, password, confirm_password }),
+            skipAuth: true
+        });
+    },
+
+    async login(email, password) {
+        const data = await apiRequest('/admin/login', {
+            method: 'POST',
+            body: JSON.stringify({ email, password }),
+            skipAuth: true
+        });
+
+        if (data.token) {
+            setToken(data.token);
+            setUser(data.user);
+        }
+
+        return data;
+    },
+
+    async verify() {
+        return apiRequest('/admin/verify');
+    },
+
+    async logout() {
+        removeToken();
+    }
+};
+
+// Legacy Auth API (for backward compatibility)
 const AuthAPI = {
     async register(name, email, password, confirm_password) {
         return apiRequest('/auth/signup', {
@@ -227,10 +261,10 @@ const JobsAPI = {
         });
     },
 
-    async update(id, title, company, tech, url, description) {
+    async update(id, title, company, date, tech, url, description) {
         return apiRequest(`/jobs/${id}`, {
             method: 'PUT',
-            body: JSON.stringify({ title, company, tech, url, description }),
+            body: JSON.stringify({ title, company, date, tech, url, description }),
             skipAuth: true
         });
     },

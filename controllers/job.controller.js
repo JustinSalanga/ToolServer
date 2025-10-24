@@ -59,6 +59,8 @@ exports.getJob = async (req, res) => {
 exports.createJob = async (req, res) => {
     const { title, company, tech, url, description, date } = req.body;
 
+    console.log(date);
+
     try {
         // Validate required fields
         if (!title || !company || !date) {
@@ -103,7 +105,7 @@ exports.createJob = async (req, res) => {
 
 exports.updateJob = async (req, res) => {
     const { id } = req.params;
-    const { title, company, tech, url, description } = req.body;
+    const { title, company, date, tech, url, description } = req.body;
 
     try {
         // Check if job exists
@@ -112,8 +114,13 @@ exports.updateJob = async (req, res) => {
             return handleError(res, 404, 'Job not found');
         }
 
+        // Validate required fields
+        if (!title || !company || !date) {
+            return handleError(res, 400, 'Title, company and date are required');
+        }
+
         // Update job
-        const updatedJob = await model.updateJob(id, title, company, tech, url, description);
+        const updatedJob = await model.updateJob(id, title, company, date, tech, url, description);
 
         res.status(200).json({
             message: 'Job updated successfully',

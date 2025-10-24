@@ -1,0 +1,17 @@
+const express = require('express');
+const { userLogin, userRegister, userVerify } = require('../controllers/user-auth.controller');
+const { validateLogin, validateRegister, authenticateUser } = require('../utils/auth.middleware');
+const router = express.Router();
+
+// User authentication routes
+router.route('/login')
+    .post(validateLogin, userLogin);
+
+router.route('/register')
+    .post(validateRegister, userRegister);
+
+// User token verification route (requires user authentication)
+router.route('/verify')
+    .get(authenticateUser, userVerify);
+
+module.exports = router;

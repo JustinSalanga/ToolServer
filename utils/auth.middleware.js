@@ -42,11 +42,17 @@ exports.validateLogin = (req, res, next) => {
     next();
 }
 
-// Passport JWT authentication middleware
+// Passport JWT authentication middleware (legacy)
 exports.authenticate = passport.authenticate('jwt', { session: false });
 
-// Role-based authentication middleware
-exports.authenticateAdmin = (req, res, next) => {
+// Admin authentication middleware
+exports.authenticateAdmin = passport.authenticate('admin-jwt', { session: false });
+
+// User authentication middleware
+exports.authenticateUser = passport.authenticate('user-jwt', { session: false });
+
+// Role-based authentication middleware (legacy)
+exports.authenticateAdminLegacy = (req, res, next) => {
     // First authenticate the user
     passport.authenticate('jwt', { session: false }, (err, user, info) => {
         if (err) {

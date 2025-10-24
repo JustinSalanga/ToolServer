@@ -383,12 +383,12 @@ exports.createJob = async (title, company, tech, url, description, date) => {
     return res.rows[0];
 }
 
-exports.updateJob = async (jobId, title, company, tech, url, description) => {
+exports.updateJob = async (jobId, title, company, date, tech, url, description) => {
     const normalizedUrl = url ? normalizeUrl(url) : null;
     const res = await db.query(
-        `UPDATE jobs SET title = $1, company = $2, tech = $3, url = $4, normalized_url = $5, description = $6, 
-         updated_at = CURRENT_TIMESTAMP WHERE id = $7 RETURNING *`,
-        [title, company, tech, url, normalizedUrl, description, jobId]
+        `UPDATE jobs SET title = $1, company = $2, date = $3, tech = $4, url = $5, normalized_url = $6, description = $7, 
+         updated_at = CURRENT_TIMESTAMP WHERE id = $8 RETURNING *`,
+        [title, company, date, tech, url, normalizedUrl, description, jobId]
     );
     return res.rows[0];
 }
