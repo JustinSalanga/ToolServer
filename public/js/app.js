@@ -1158,6 +1158,16 @@ function editJob(id) {
     const job = jobsData.find(j => j.id === id);
     if (!job) return;
 
+    // Format job.date to yyyy-mm-dd for date input
+    let formattedDate = '';
+    if (job.date) {
+        const d = new Date(job.date);
+        const yyyy = d.getFullYear();
+        const mm = String(d.getMonth() + 1).padStart(2, '0');
+        const dd = String(d.getDate()).padStart(2, '0');
+        formattedDate = `${yyyy}-${mm}-${dd}`;
+    }
+
     const modalBody = document.getElementById('modalBody');
     modalBody.innerHTML = `
         <h2>Edit Job</h2>
@@ -1172,7 +1182,7 @@ function editJob(id) {
             </div>
             <div class="form-group">
                 <label>Date *</label>
-                <input type="date" id="editJobDate" value="${job.date || ''}" required>
+                <input type="date" id="editJobDate" value="${formattedDate}" required>
             </div>
             <div class="form-group">
                 <label>Tech Stack</label>
