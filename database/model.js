@@ -316,6 +316,7 @@ function clearLink(link) {
         !link.includes('indeed') &&
         !link.includes('builtin') &&
         !link.includes('wellfound') &&
+        !link.includes('recruiting.ultipro') &&
         !link.includes('wiraa')) {
         link = link.split('?')[0];
     }
