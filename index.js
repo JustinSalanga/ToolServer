@@ -63,8 +63,12 @@ const morgan = require('morgan');
     app.use('/api/jobs', jobRouter);
     app.use('/api/settings', settingsRouter);
 
-    // Serve the dashboard for the root route
-    app.get('/', (req, res) => {
+    // Serve the React app for all routes (client-side routing)
+    app.get('*', (req, res) => {
+        // Don't serve HTML for API routes
+        if (req.path.startsWith('/api')) {
+            return res.status(404).json({ error: 'Route not found' });
+        }
         res.sendFile(path.join(__dirname, 'public', 'index.html'));
     });
 
@@ -72,11 +76,6 @@ const morgan = require('morgan');
     app.use((err, req, res, next) => {
         console.error(err.stack);
         res.status(500).json({ error: 'Something went wrong!' });
-    });
-
-    // 404 handler
-    app.use((req, res) => {
-        res.status(404).json({ error: 'Route not found' });
     });
 
     // Initialize database and start server
