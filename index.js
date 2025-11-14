@@ -64,7 +64,7 @@ const morgan = require('morgan');
     app.use('/api/settings', settingsRouter);
 
     // Serve the React app for all routes (client-side routing)
-    app.get('*', (req, res) => {
+    app.get('/', (req, res) => {
         // Don't serve HTML for API routes
         if (req.path.startsWith('/api')) {
             return res.status(404).json({ error: 'Route not found' });
