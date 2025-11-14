@@ -20,7 +20,7 @@ export const setUser = (user) => {
 // Use the proxy in development, or direct API URL in production
 const API_BASE = import.meta.env.DEV 
   ? '/api'  // Vite proxy will handle this
-  : `http://${window.location.hostname}:8085/api`;
+  : `https://${window.location.hostname}/api`;
 
 async function apiRequest(endpoint, options = {}) {
   const token = getToken();
