@@ -71,10 +71,11 @@ exports.login = async (req, res) => {
         // }
 
         // Verify IP address - must match registration IP
-        if (user.registration_ip && user.registration_ip !== clientIP && clientIP !== '127.0.0.1') {
-            console.warn(`Login attempt from different IP. User: ${email}, Registered IP: ${user.registration_ip}, Request IP: ${clientIP}`);
-            return handleError(res, 403, 'Login from this IP address is not allowed');
-        }
+        console.warn(`Login attempt from IP. User: ${email}, Registered IP: ${user.registration_ip}, Request IP: ${clientIP}`);
+        // if (user.registration_ip && user.registration_ip !== clientIP && clientIP !== '127.0.0.1') {
+        //     console.warn(`Login attempt from different IP. User: ${email}, Registered IP: ${user.registration_ip}, Request IP: ${clientIP}`);
+        //     return handleError(res, 403, 'Login from this IP address is not allowed');
+        // }
 
         // Verify password
         const isPasswordValid = await bcrypt.compare(password, user.password);
