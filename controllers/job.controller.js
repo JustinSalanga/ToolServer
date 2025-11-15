@@ -20,14 +20,14 @@ exports.getTodayJobs = async (req, res) => {
     try {
         // Get today's date in YYYY-MM-DD format
         const today = new Date();
-        const year = today.getFullYear();
-        const month = String(today.getMonth() + 1).padStart(2, '0');
-        const day = String(today.getDate()).padStart(2, '0');
-        const isoDate = `${year}-${month}-${day}`;
+        // const year = today.getFullYear();
+        // const month = String(today.getMonth() + 1).padStart(2, '0');
+        // const day = String(today.getDate()).padStart(2, '0');
+        const isoDate = today.toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' });
         const jobs = await model.getJobsByDate(isoDate);
 
         res.status(200).json({
-            date: today,
+            date: isoDate,
             jobs,
             count: jobs.length
         });
