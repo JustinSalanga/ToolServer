@@ -419,10 +419,10 @@ const Jobs = () => {
                             : <em>No description</em>}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(job.date).toLocaleDateString()}
+                          {job.date}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(job.created_at).toLocaleDateString()}
+                          {new Date(job.created_at).toLocaleDateString("UTC")}
                         </td>
                         <td className="px-5 py-4 whitespace-nowrap text-sm font-medium">
                           <div className="flex gap-2">
