@@ -26,6 +26,8 @@ exports.getTodayJobs = async (req, res) => {
         const isoDate = today.toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' });
         const jobs = await model.getJobsByDate(isoDate);
 
+        console.log(isoDate);
+
         res.status(200).json({
             date: isoDate,
             jobs,
