@@ -18,12 +18,20 @@ exports.getJobs = async (req, res) => {
 
 exports.getTodayJobs = async (req, res) => {
     try {
-        // Get today's date in YYYY-MM-DD format
-        const today = new Date();
-        // const year = today.getFullYear();
-        // const month = String(today.getMonth() + 1).padStart(2, '0');
-        // const day = String(today.getDate()).padStart(2, '0');
-        const isoDate = today.toLocaleDateString("en-US", { year: 'numeric', month: '2-digit', day: '2-digit' });
+        // Get today's date in PST/PDT timezone in YYYY-MM-DD format
+        const now = new Date();
+        // Convert to PST/PDT (America/Los_Angeles timezone)
+        const formatter = new Intl.DateTimeFormat('en-US', {
+            timeZone: 'America/Los_Angeles',
+            year: 'numeric',
+            month: '2-digit',
+            day: '2-digit'
+        });
+        const parts = formatter.formatToParts(now);
+        const year = parts.find(part => part.type === 'year').value;
+        const month = parts.find(part => part.type === 'month').value;
+        const day = parts.find(part => part.type === 'day').value;
+        const isoDate = `${year}-${month}-${day}`;
         const jobs = await model.getJobsByDate(isoDate);
 
         console.log(isoDate);
