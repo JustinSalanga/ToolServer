@@ -66,48 +66,55 @@ exports.getJob = async (req, res) => {
     }
 }
 
+const formatDate = (date) => {
+    const dateObj = new Date(date);
+    if (isNaN(dateObj.getTime())) {
+        return date;
+    }
+    const formatter = new Intl.DateTimeFormat('en-US', {
+        timeZone: 'America/Los_Angeles',
+        year: 'numeric',
+        month: '2-digit',
+        day: '2-digit'
+    });
+    const parts = formatter.formatToParts(dateObj);
+    const year = parts.find(part => part.type === 'year').value;
+    const month = parts.find(part => part.type === 'month').value;
+    const day = parts.find(part => part.type === 'day').value;
+    const isoDate = `${year}-${month}-${day}`;
+    return isoDate;
+}
+
 exports.createJob = async (req, res) => {
     const { title, company, tech, url, description, date } = req.body;
 
-    try {
-        // Validate required fields
-        if (!title || !company || !date) {
-            return handleError(res, 400, 'Title, company and date are required');
-        }
-
-        // Validate URL format if provided
-        if (url) {
-            try {
-                new URL(url); // Validate URL format
-            } catch (urlError) {
-                return handleError(res, 400, 'Invalid URL format');
-            }
-
-            // Check if URL already exists using normalized URL
-            const existingJob = await model.getJobByNormalizedUrl(url);
-            if (existingJob) {
-                return handleError(res, 409, 'Job with this URL already exists');
-            }
-        }
-
-        // Note: Since we removed the ID field from createJob, we don't need to check for existing ID
-
-        // Check if job with same title and company already exists
-        // const existingJobByTitleCompany = await model.getJobByTitleAndCompany(title, company);
-        // if (existingJobByTitleCompany) {
-        //     return handleError(res, 409, 'Job with this title and company already exists');
-        // }
-
-        const newJob = await model.createJob(title, company, tech, url, description, date);
-
-        res.status(201).json({
-            message: 'Job created successfully',
-            job: newJob
-        });
-    } catch (error) {
-        console.error('Create job error:', error);
-        handleError(res, 500, 'Error creating job');
+    // Validate required fields
+    if (!title || !company || !date) {
+        return handleError(res, 400, 'Title, company and date are required');
     }
+
+    // Validate URL format if provided
+    if (url) {
+        try {
+            new URL(url); // Validate URL format
+        } catch (urlError) {
+            return handleError(res, 400, 'Invalid URL format');
+        }
+
+        // Check if URL already exists using normalized URL
+        const existingJob = await model.getJobByNormalizedUrl(url);
+        if (existingJob) {
+            return handleError(res, 409, 'Job with this URL already exists');
+        }
+    }
+
+    const formattedDate = formatDate(date);
+    const newJob = await model.createJob(title, company, tech, url, description, formattedDate);
+
+    return res.status(201).json({
+        message: 'Job created successfully',
+        job: newJob
+    });
 }
 
 exports.updateJob = async (req, res) => {
