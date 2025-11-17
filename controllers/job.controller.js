@@ -72,7 +72,7 @@ const formatDate = (date) => {
         return date;
     }
     const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'America/Los_Angeles',
+        timeZone: 'UTC',
         year: 'numeric',
         month: '2-digit',
         day: '2-digit'
