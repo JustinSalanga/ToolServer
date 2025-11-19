@@ -3,10 +3,12 @@ const { handleError } = require('../utils/utils');
 
 // Available GPT models
 const GPT_MODELS = [
+    { id: 'gpt-5-mini', name: 'GPT-5 Mini', description: 'Smaller version of GPT-5 with reduced capabilities' },
     { id: 'gpt-5-chat-latest', name: 'GPT-5 Instant', description: 'Latest and fastest multimodal model with vision capabilities' },
     { id: 'gpt-5', name: 'GPT-5', description: 'Latest multimodal model with vision capabilities' },
     { id: 'gpt-4o', name: 'GPT-4o', description: 'Multimodal model with vision capabilities' },
     { id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Compact version of GPT-4o' },
+    { id: 'gpt-4.1-mini-2025-04-14', name: 'GPT-4.1 Mini', description: 'Compact version of GPT-4.1' },
 ];
 
 const SETTING_KEY = 'selected_gpt_model';
@@ -32,7 +34,7 @@ exports.getSelectedModel = async (req, res) => {
         if (!setting) {
             // Return default model if not set
             return res.status(200).json({
-                selectedModel: 'gpt-3.5-turbo',
+                selectedModel: 'gpt-5-mini',
                 isDefault: true
             });
         }
