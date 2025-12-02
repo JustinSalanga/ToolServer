@@ -94,6 +94,16 @@ async function setupDatabase() {
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        await appClient.query(`
+            CREATE TABLE IF NOT EXISTS block_list (
+                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                company_name VARCHAR(500),
+                url TEXT,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CHECK (company_name IS NOT NULL OR url IS NOT NULL)
+            );
+        `);
         
         // console.log('🧩 Tables created successfully!');
 

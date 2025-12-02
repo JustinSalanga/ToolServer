@@ -499,3 +499,75 @@ exports.importBidData = async (filePath = 'bid.xlsx') => {
         }
     }
 }
+
+// Block List Management Functions
+exports.getAllBlockListItems = async () => {
+    const res = await db.query(
+        'SELECT * FROM block_list ORDER BY created_at DESC'
+    );
+    return res.rows;
+}
+
+exports.getBlockListItemById = async (id) => {
+    const res = await db.query(
+        'SELECT * FROM block_list WHERE id = $1',
+        [id]
+    );
+    return res.rows[0];
+}
+
+exports.createBlockListItem = async (companyName, url) => {
+    // Normalize URL if provided
+    const normalizedUrl = url ? normalizeUrl(url) : null;
+    const res = await db.query(
+        'INSERT INTO block_list (company_name, url) VALUES ($1, $2) RETURNING *',
+        [companyName || null, normalizedUrl]
+    );
+    return res.rows[0];
+}
+
+exports.updateBlockListItem = async (id, companyName, url) => {
+    // Normalize URL if provided
+    const normalizedUrl = url ? normalizeUrl(url) : null;
+    const res = await db.query(
+        'UPDATE block_list SET company_name = $1, url = $2, updated_at = CURRENT_TIMESTAMP WHERE id = $3 RETURNING *',
+        [companyName || null, normalizedUrl, id]
+    );
+    return res.rows[0];
+}
+
+exports.deleteBlockListItem = async (id) => {
+    const res = await db.query(
+        'DELETE FROM block_list WHERE id = $1 RETURNING *',
+        [id]
+    );
+    return res.rows[0];
+}
+
+// Check if company name or URL is in block list
+exports.isBlocked = async (company, url) => {
+    let query = 'SELECT * FROM block_list WHERE ';
+    let params = [];
+    let conditions = [];
+
+    if (company) {
+        conditions.push('company_name ILIKE $' + (params.length + 1));
+        params.push(`%${company}%`);
+    }
+
+    if (url) {
+        // Normalize URL for comparison
+        const normalizedUrl = normalizeUrl(url);
+        // Check both exact match and partial match for URL
+        conditions.push('(url = $' + (params.length + 1) + ' OR url ILIKE $' + (params.length + 2) + ')');
+        params.push(normalizedUrl, `%${normalizedUrl}%`);
+    }
+
+    if (conditions.length === 0) {
+        return false;
+    }
+
+    query += conditions.join(' OR ');
+    const res = await db.query(query, params);
+    return res.rows.length > 0;
+}

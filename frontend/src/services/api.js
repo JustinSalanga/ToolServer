@@ -198,10 +198,10 @@ export const JobsAPI = {
     return apiRequest(`/jobs/${id}`, { skipAuth: true });
   },
 
-  async create(id, title, company, tech, url, description) {
+  async create(id, title, company, date, tech, url, description) {
     return apiRequest('/jobs/', {
       method: 'POST',
-      body: JSON.stringify({ id, title, company, tech, url, description }),
+      body: JSON.stringify({ id, title, company, date, tech, url, description }),
       skipAuth: true,
     });
   },
@@ -218,6 +218,36 @@ export const JobsAPI = {
     return apiRequest(`/jobs/${id}`, {
       method: 'DELETE',
       skipAuth: true,
+    });
+  },
+};
+
+export const BlockListAPI = {
+  async getAll() {
+    return apiRequest('/block-list/');
+  },
+
+  async getById(id) {
+    return apiRequest(`/block-list/${id}`);
+  },
+
+  async create(company_name, url) {
+    return apiRequest('/block-list/', {
+      method: 'POST',
+      body: JSON.stringify({ company_name, url }),
+    });
+  },
+
+  async update(id, company_name, url) {
+    return apiRequest(`/block-list/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ company_name, url }),
+    });
+  },
+
+  async delete(id) {
+    return apiRequest(`/block-list/${id}`, {
+      method: 'DELETE',
     });
   },
 };

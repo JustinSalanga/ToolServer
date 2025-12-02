@@ -108,6 +108,12 @@ exports.createJob = async (req, res) => {
         }
     }
 
+    // Check if company or URL is in block list
+    const isBlocked = await model.isBlocked(company, url);
+    if (isBlocked) {
+        return handleError(res, 403, 'This job is blocked. Company name or URL is in the block list.');
+    }
+
     const formattedDate = formatDate(date);
     const newJob = await model.createJob(title, company, tech, url, description, formattedDate);
 

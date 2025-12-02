@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { JobsAPI } from '../services/api';
+import { JobsAPI, BlockListAPI } from '../services/api';
 import { Modal, AlertModal, ConfirmModal } from '../components/Modal';
 import * as XLSX from 'xlsx';
 
@@ -13,6 +13,9 @@ const getTodayDate = () => {
 };
 
 const Jobs = () => {
+  const [activeTab, setActiveTab] = useState('jobs'); // 'jobs' or 'blocklist'
+
+  // Jobs state
   const [jobs, setJobs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -33,6 +36,18 @@ const Jobs = () => {
     url: '',
     description: '',
   });
+
+  // Block list state
+  const [blockListItems, setBlockListItems] = useState([]);
+  const [blockListLoading, setBlockListLoading] = useState(false);
+  const [blockListModalOpen, setBlockListModalOpen] = useState(false);
+  const [editingBlockItem, setEditingBlockItem] = useState(null);
+  const [blockListFormData, setBlockListFormData] = useState({
+    company_name: '',
+    url: '',
+  });
+
+  // Shared modals
   const [alertOpen, setAlertOpen] = useState(false);
   const [confirmOpen, setConfirmOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
@@ -43,11 +58,17 @@ const Jobs = () => {
 
   useEffect(() => {
     initializeDateFilter();
-    loadJobs();
-  }, []);
+    if (activeTab === 'jobs') {
+      loadJobs();
+    } else if (activeTab === 'blocklist') {
+      loadBlockList();
+    }
+  }, [activeTab]);
 
   useEffect(() => {
-    loadJobs();
+    if (activeTab === 'jobs') {
+      loadJobs();
+    }
   }, [currentPage, pageSize, dateFilter]);
 
   const initializeDateFilter = () => {
@@ -102,7 +123,7 @@ const Jobs = () => {
       id: '',
       title: '',
       company: '',
-      date: '',
+      date: getTodayDate(),
       tech: '',
       url: '',
       description: '',
@@ -151,6 +172,7 @@ const Jobs = () => {
           parseInt(formData.id),
           formData.title,
           formData.company,
+          formData.date,
           formData.tech,
           formData.url,
           formData.description
@@ -285,6 +307,73 @@ const Jobs = () => {
     }
   };
 
+  // Block List Functions
+  const loadBlockList = async () => {
+    try {
+      setBlockListLoading(true);
+      const data = await BlockListAPI.getAll();
+      setBlockListItems(data.items || []);
+    } catch (error) {
+      showAlert('Error', error.message);
+    } finally {
+      setBlockListLoading(false);
+    }
+  };
+
+  const handleAddBlockItem = () => {
+    setEditingBlockItem(null);
+    setBlockListFormData({
+      company_name: '',
+      url: '',
+    });
+    setBlockListModalOpen(true);
+  };
+
+  const handleEditBlockItem = (item) => {
+    setEditingBlockItem(item);
+    setBlockListFormData({
+      company_name: item.company_name || '',
+      url: item.url || '',
+    });
+    setBlockListModalOpen(true);
+  };
+
+  const handleSaveBlockItem = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingBlockItem) {
+        await BlockListAPI.update(
+          editingBlockItem.id,
+          blockListFormData.company_name,
+          blockListFormData.url
+        );
+        showAlert('Success', 'Block list item updated successfully!');
+      } else {
+        await BlockListAPI.create(
+          blockListFormData.company_name,
+          blockListFormData.url
+        );
+        showAlert('Success', 'Block list item added successfully!');
+      }
+      setBlockListModalOpen(false);
+      loadBlockList();
+    } catch (error) {
+      showAlert('Error', error.message);
+    }
+  };
+
+  const handleDeleteBlockItem = (item) => {
+    showConfirm('Delete Block List Item', 'Are you sure you want to delete this block list item?', async () => {
+      try {
+        await BlockListAPI.delete(item.id);
+        showAlert('Success', 'Block list item deleted successfully!');
+        loadBlockList();
+      } catch (error) {
+        showAlert('Error', error.message);
+      }
+    });
+  };
+
   const startItem = totalJobs === 0 ? 0 : (currentPage - 1) * pageSize + 1;
   const endItem = Math.min(currentPage * pageSize, totalJobs);
   const maxVisiblePages = 5;
@@ -298,331 +387,491 @@ const Jobs = () => {
     <div className="p-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-3xl font-bold text-gray-900">Job Management</h1>
-        <div className="flex gap-2">
-          <button
-            onClick={copyTodayJobs}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
-          >
-            📋 Copy Today Jobs
-          </button>
-          <button
-            onClick={exportJobsToExcel}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
-          >
-            📊 Save to Excel
-          </button>
-          <button
-            onClick={handleAddJob}
-            className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark"
-          >
-            + Add Job
-          </button>
-        </div>
       </div>
 
-      <div className="bg-white rounded-lg shadow p-6">
-        <div className="flex gap-4 mb-4 flex-wrap">
-          <input
-            type="text"
-            placeholder="Search jobs..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-            className="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-          />
-          <select
-            value={dateFilter}
-            onChange={handleDateFilterChange}
-            className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-          >
-            {dateOptions.map((option) => (
-              <option key={option.value} value={option.value}>
-                {option.label}
-              </option>
-            ))}
-          </select>
+      {/* Tabs */}
+      <div className="mb-6 border-b border-gray-200">
+        <nav className="-mb-px flex space-x-8">
           <button
-            onClick={handleClearDateFilter}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+            onClick={() => setActiveTab('jobs')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'jobs'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
-            🗑️ Clear Date
+            Jobs
           </button>
           <button
-            onClick={() => loadJobs()}
-            className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+            onClick={() => setActiveTab('blocklist')}
+            className={`py-4 px-1 border-b-2 font-medium text-sm ${activeTab === 'blocklist'
+              ? 'border-primary text-primary'
+              : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'
+              }`}
           >
-            🔄 Refresh
+            Block List
           </button>
+        </nav>
+      </div>
+
+      {/* Jobs Tab Content */}
+      {activeTab === 'jobs' && <>
+        <div className="flex justify-between items-center mb-6">
+          <div className="flex gap-2">
+            <button
+              onClick={copyTodayJobs}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+            >
+              📋 Copy Today Jobs
+            </button>
+            <button
+              onClick={exportJobsToExcel}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+            >
+              📊 Save to Excel
+            </button>
+            <button
+              onClick={handleAddJob}
+              className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark"
+            >
+              + Add Job
+            </button>
+          </div>
         </div>
 
-        {loading ? (
-          <div className="text-center py-8">Loading jobs...</div>
-        ) : (
-          <>
-            <div className="overflow-x-auto">
-              <table className="min-w-full divide-y divide-gray-200">
-                <thead className="bg-gray-50">
-                  <tr>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tech Stack</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th>
-                    <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="bg-white divide-y divide-gray-200">
-                  {jobs.length === 0 ? (
+        <div className="bg-white rounded-lg shadow p-6">
+          <div className="flex gap-4 mb-4 flex-wrap">
+            <input
+              type="text"
+              placeholder="Search jobs..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
+              className="flex-1 min-w-[200px] px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            />
+            <select
+              value={dateFilter}
+              onChange={handleDateFilterChange}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              {dateOptions.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
+            <button
+              onClick={handleClearDateFilter}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+            >
+              🗑️ Clear Date
+            </button>
+            <button
+              onClick={() => loadJobs()}
+              className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
+            >
+              🔄 Refresh
+            </button>
+          </div>
+
+          {loading ? (
+            <div className="text-center py-8">Loading jobs...</div>
+          ) : (
+            <>
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200">
+                  <thead className="bg-gray-50">
                     <tr>
-                      <td colSpan="9" className="px-6 py-4 text-center text-gray-500">
-                        No jobs found
-                      </td>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tech Stack</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
                     </tr>
-                  ) : (
-                    jobs.map((job) => (
-                      <tr key={job.id}>
-                        <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">{job.id}</td>
-                        <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={job.title}>
-                          {job.title
-                            ? job.title.length > 40
-                              ? job.title.substring(0, 40) + '...'
-                              : job.title
-                            : <em>No title</em>
-                          }
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">{job.company}</td>
-                        <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {job.tech || <em>Not specified</em>}
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap text-sm">
-                          {job.url ? (
-                            <a
-                              href={job.url}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              🔗 View
-                            </a>
-                          ) : (
-                            <em className="text-gray-500">No URL</em>
-                          )}
-                        </td>
-                        <td className="px-5 py-4 text-sm text-gray-500 max-w-xs truncate" title={job.description}>
-                          {job.description
-                            ? job.description.length > 50
-                              ? job.description.substring(0, 50) + '...'
-                              : job.description
-                            : <em>No description</em>}
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {job.date}
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
-                          {new Date(job.created_at).toLocaleDateString("UTC")}
-                        </td>
-                        <td className="px-5 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex gap-2">
-                            <button
-                              onClick={() => handleEditJob(job)}
-                              className="text-blue-600 hover:text-blue-900"
-                            >
-                              Edit
-                            </button>
-                            <button
-                              onClick={() => handleDeleteJob(job)}
-                              className="text-red-600 hover:text-red-900"
-                            >
-                              Delete
-                            </button>
-                          </div>
+                  </thead>
+                  <tbody className="bg-white divide-y divide-gray-200">
+                    {jobs.length === 0 ? (
+                      <tr>
+                        <td colSpan="9" className="px-6 py-4 text-center text-gray-500">
+                          No jobs found
                         </td>
                       </tr>
-                    ))
-                  )}
-                </tbody>
-              </table>
-            </div>
+                    ) : (
+                      jobs.map((job) => (
+                        <tr key={job.id}>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">{job.id}</td>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm font-medium text-gray-900" title={job.title}>
+                            {job.title
+                              ? job.title.length > 40
+                                ? job.title.substring(0, 40) + '...'
+                                : job.title
+                              : <em>No title</em>
+                            }
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">{job.company}</td>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {job.tech || <em>Not specified</em>}
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm">
+                            {job.url ? (
+                              <a
+                                href={job.url}
+                                target="_blank"
+                                rel="noopener noreferrer"
+                                className="text-blue-600 hover:text-blue-900"
+                              >
+                                🔗 View
+                              </a>
+                            ) : (
+                              <em className="text-gray-500">No URL</em>
+                            )}
+                          </td>
+                          <td className="px-5 py-4 text-sm text-gray-500 max-w-xs truncate" title={job.description}>
+                            {job.description
+                              ? job.description.length > 50
+                                ? job.description.substring(0, 50) + '...'
+                                : job.description
+                              : <em>No description</em>}
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {job.date}
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
+                            {new Date(job.created_at).toLocaleDateString("UTC")}
+                          </td>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm font-medium">
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => handleEditJob(job)}
+                                className="text-blue-600 hover:text-blue-900"
+                              >
+                                Edit
+                              </button>
+                              <button
+                                onClick={() => handleDeleteJob(job)}
+                                className="text-red-600 hover:text-red-900"
+                              >
+                                Delete
+                              </button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
 
-            {totalJobs > 0 && (
-              <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
-                <div className="text-sm text-gray-600">
-                  Showing {startItem}-{endItem} of {totalJobs}
-                </div>
-                <div className="flex gap-2 items-center">
-                  <button
-                    onClick={() => handlePageChange(1)}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    First
-                  </button>
-                  <button
-                    onClick={() => handlePageChange(currentPage - 1)}
-                    disabled={currentPage === 1}
-                    className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Previous
-                  </button>
-                  <div className="flex gap-1">
-                    {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map((page) => (
-                      <button
-                        key={page}
-                        onClick={() => handlePageChange(page)}
-                        className={`px-3 py-1 border rounded-md ${
-                          page === currentPage
+              {totalJobs > 0 && (
+                <div className="mt-6 flex flex-col sm:flex-row justify-between items-center gap-4">
+                  <div className="text-sm text-gray-600">
+                    Showing {startItem}-{endItem} of {totalJobs}
+                  </div>
+                  <div className="flex gap-2 items-center">
+                    <button
+                      onClick={() => handlePageChange(1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      First
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(currentPage - 1)}
+                      disabled={currentPage === 1}
+                      className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Previous
+                    </button>
+                    <div className="flex gap-1">
+                      {Array.from({ length: endPage - startPage + 1 }, (_, i) => startPage + i).map((page) => (
+                        <button
+                          key={page}
+                          onClick={() => handlePageChange(page)}
+                          className={`px-3 py-1 border rounded-md ${page === currentPage
                             ? 'bg-primary text-white border-primary'
                             : 'border-gray-300 hover:bg-gray-50'
-                        }`}
-                      >
-                        {page}
-                      </button>
-                    ))}
+                            }`}
+                        >
+                          {page}
+                        </button>
+                      ))}
+                    </div>
+                    <button
+                      onClick={() => handlePageChange(currentPage + 1)}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Next
+                    </button>
+                    <button
+                      onClick={() => handlePageChange(totalPages)}
+                      disabled={currentPage === totalPages}
+                      className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    >
+                      Last
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <label className="text-sm text-gray-600">Items per page:</label>
+                    <select
+                      value={pageSize}
+                      onChange={handlePageSizeChange}
+                      className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      <option value="10">10</option>
+                      <option value="20">20</option>
+                      <option value="50">50</option>
+                      <option value="100">100</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+
+
+              <Modal
+                isOpen={modalOpen}
+                onClose={() => setModalOpen(false)}
+                title={editingJob ? 'Edit Job' : 'Add New Job'}
+              >
+                <form onSubmit={handleSaveJob}>
+                  {!editingJob && (
+                    <div className="mb-4">
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Job ID *</label>
+                      <input
+                        type="number"
+                        required
+                        value={formData.id}
+                        onChange={(e) => setFormData({ ...formData, id: e.target.value })}
+                        placeholder="123"
+                        min="1"
+                        className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                      />
+                    </div>
+                  )}
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.title}
+                      onChange={(e) => setFormData({ ...formData, title: e.target.value })}
+                      placeholder="Senior Developer"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company *</label>
+                    <input
+                      type="text"
+                      required
+                      value={formData.company}
+                      onChange={(e) => setFormData({ ...formData, company: e.target.value })}
+                      placeholder="Tech Corp"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                    <input
+                      type="date"
+                      required
+                      value={formData.date}
+                      onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Tech Stack</label>
+                    <input
+                      type="text"
+                      value={formData.tech}
+                      onChange={(e) => setFormData({ ...formData, tech: e.target.value })}
+                      placeholder="React, Node.js, PostgreSQL"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                    <input
+                      type="url"
+                      value={formData.url}
+                      onChange={(e) => setFormData({ ...formData, url: e.target.value })}
+                      placeholder="https://example.com/job/123"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                    <textarea
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows="4"
+                      placeholder="Job description..."
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
                   </div>
                   <button
-                    onClick={() => handlePageChange(currentPage + 1)}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
+                    type="submit"
+                    className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-dark"
                   >
-                    Next
+                    {editingJob ? 'Update Job' : 'Add Job'}
                   </button>
-                  <button
-                    onClick={() => handlePageChange(totalPages)}
-                    disabled={currentPage === totalPages}
-                    className="px-3 py-1 border border-gray-300 rounded-md disabled:opacity-50 disabled:cursor-not-allowed hover:bg-gray-50"
-                  >
-                    Last
-                  </button>
-                </div>
-                <div className="flex items-center gap-2">
-                  <label className="text-sm text-gray-600">Items per page:</label>
-                  <select
-                    value={pageSize}
-                    onChange={handlePageSizeChange}
-                    className="px-2 py-1 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                  >
-                    <option value="10">10</option>
-                    <option value="20">20</option>
-                    <option value="50">50</option>
-                    <option value="100">100</option>
-                  </select>
-                </div>
+                </form>
+              </Modal>
+            </>
+          )}
+
+          {/* Block List Tab Content */}
+          {activeTab === 'blocklist' && (
+            <>
+              <div className="flex justify-end items-center mb-6">
+                <button
+                  onClick={handleAddBlockItem}
+                  className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark"
+                >
+                  + Add Block List Item
+                </button>
               </div>
-            )}
-          </>
-        )}
-      </div>
 
-      <Modal
-        isOpen={modalOpen}
-        onClose={() => setModalOpen(false)}
-        title={editingJob ? 'Edit Job' : 'Add New Job'}
-      >
-        <form onSubmit={handleSaveJob}>
-          {!editingJob && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Job ID *</label>
-              <input
-                type="number"
-                required
-                value={formData.id}
-                onChange={(e) => setFormData({ ...formData, id: e.target.value })}
-                placeholder="123"
-                min="1"
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
+              <div className="bg-white rounded-lg shadow p-6">
+                {blockListLoading ? (
+                  <div className="text-center py-8">Loading block list...</div>
+                ) : (
+                  <>
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full divide-y divide-gray-200">
+                        <thead className="bg-gray-50">
+                          <tr>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company Name</th>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th>
+                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                          </tr>
+                        </thead>
+                        <tbody className="bg-white divide-y divide-gray-200">
+                          {blockListItems.length === 0 ? (
+                            <tr>
+                              <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                                No block list items found
+                              </td>
+                            </tr>
+                          ) : (
+                            blockListItems.map((item) => (
+                              <tr key={item.id}>
+                                <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">{item.id}</td>
+                                <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">
+                                  {item.company_name || <em className="text-gray-500">Not specified</em>}
+                                </td>
+                                <td className="px-5 py-4 text-sm text-gray-500">
+                                  {item.url ? (
+                                    <a
+                                      href={item.url}
+                                      target="_blank"
+                                      rel="noopener noreferrer"
+                                      className="text-blue-600 hover:text-blue-900 truncate block max-w-xs"
+                                      title={item.url}
+                                    >
+                                      {item.url.length > 50 ? item.url.substring(0, 50) + '...' : item.url}
+                                    </a>
+                                  ) : (
+                                    <em className="text-gray-500">Not specified</em>
+                                  )}
+                                </td>
+                                <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
+                                  {new Date(item.created_at).toLocaleDateString("UTC")}
+                                </td>
+                                <td className="px-5 py-4 whitespace-nowrap text-sm font-medium">
+                                  <div className="flex gap-2">
+                                    <button
+                                      onClick={() => handleEditBlockItem(item)}
+                                      className="text-blue-600 hover:text-blue-900"
+                                    >
+                                      Edit
+                                    </button>
+                                    <button
+                                      onClick={() => handleDeleteBlockItem(item)}
+                                      className="text-red-600 hover:text-red-900"
+                                    >
+                                      Delete
+                                    </button>
+                                  </div>
+                                </td>
+                              </tr>
+                            ))
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
+
+              {/* Block List Modal */}
+              <Modal
+                isOpen={blockListModalOpen}
+                onClose={() => setBlockListModalOpen(false)}
+                title={editingBlockItem ? 'Edit Block List Item' : 'Add Block List Item'}
+              >
+                <form onSubmit={handleSaveBlockItem}>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                    <input
+                      type="text"
+                      value={blockListFormData.company_name}
+                      onChange={(e) => setBlockListFormData({ ...blockListFormData, company_name: e.target.value })}
+                      placeholder="Company name to block"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Leave empty if blocking by URL only</p>
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                    <input
+                      type="url"
+                      value={blockListFormData.url}
+                      onChange={(e) => setBlockListFormData({ ...blockListFormData, url: e.target.value })}
+                      placeholder="https://example.com"
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <p className="mt-1 text-xs text-gray-500">Leave empty if blocking by company name only</p>
+                  </div>
+                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                    <p className="text-sm text-yellow-800">
+                      <strong>Note:</strong> At least one field (Company Name or URL) must be provided.
+                    </p>
+                  </div>
+                  <button
+                    type="submit"
+                    className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-dark"
+                  >
+                    {editingBlockItem ? 'Update Block List Item' : 'Add Block List Item'}
+                  </button>
+                </form>
+              </Modal>
+            </>
           )}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Title *</label>
-            <input
-              type="text"
-              required
-              value={formData.title}
-              onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-              placeholder="Senior Developer"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Company *</label>
-            <input
-              type="text"
-              required
-              value={formData.company}
-              onChange={(e) => setFormData({ ...formData, company: e.target.value })}
-              placeholder="Tech Corp"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          {editingJob && (
-            <div className="mb-4">
-              <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
-              <input
-                type="date"
-                required
-                value={formData.date}
-                onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-              />
-            </div>
-          )}
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Tech Stack</label>
-            <input
-              type="text"
-              value={formData.tech}
-              onChange={(e) => setFormData({ ...formData, tech: e.target.value })}
-              placeholder="React, Node.js, PostgreSQL"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
-            <input
-              type="url"
-              value={formData.url}
-              onChange={(e) => setFormData({ ...formData, url: e.target.value })}
-              placeholder="https://example.com/job/123"
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <div className="mb-4">
-            <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              rows="4"
-              placeholder="Job description..."
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-            />
-          </div>
-          <button
-            type="submit"
-            className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-dark"
-          >
-            {editingJob ? 'Update Job' : 'Add Job'}
-          </button>
-        </form>
-      </Modal>
 
-      <AlertModal
-        isOpen={alertOpen}
-        onClose={() => setAlertOpen(false)}
-        title={alertTitle}
-        message={alertMessage}
-      />
+          <AlertModal
+            isOpen={alertOpen}
+            onClose={() => setAlertOpen(false)}
+            title={alertTitle}
+            message={alertMessage}
+          />
 
-      <ConfirmModal
-        isOpen={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-        title={confirmTitle}
-        message={confirmMessage}
-        onConfirm={confirmCallback}
-      />
+          <ConfirmModal
+            isOpen={confirmOpen}
+            onClose={() => setConfirmOpen(false)}
+            title={confirmTitle}
+            message={confirmMessage}
+            onConfirm={confirmCallback}
+          />
+        </div>
+      </>
+      }
     </div>
   );
 };
