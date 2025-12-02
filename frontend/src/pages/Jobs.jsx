@@ -724,137 +724,6 @@ const Jobs = () => {
             </>
           )}
 
-          {/* Block List Tab Content */}
-          {activeTab === 'blocklist' && (
-            <>
-              <div className="flex justify-end items-center mb-6">
-                <button
-                  onClick={handleAddBlockItem}
-                  className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark"
-                >
-                  + Add Block List Item
-                </button>
-              </div>
-
-              <div className="bg-white rounded-lg shadow p-6">
-                {blockListLoading ? (
-                  <div className="text-center py-8">Loading block list...</div>
-                ) : (
-                  <>
-                    <div className="overflow-x-auto">
-                      <table className="min-w-full divide-y divide-gray-200">
-                        <thead className="bg-gray-50">
-                          <tr>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company Name</th>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th>
-                            <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
-                          {blockListItems.length === 0 ? (
-                            <tr>
-                              <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
-                                No block list items found
-                              </td>
-                            </tr>
-                          ) : (
-                            blockListItems.map((item) => (
-                              <tr key={item.id}>
-                                <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">{item.id}</td>
-                                <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">
-                                  {item.company_name || <em className="text-gray-500">Not specified</em>}
-                                </td>
-                                <td className="px-5 py-4 text-sm text-gray-500">
-                                  {item.url ? (
-                                    <a
-                                      href={item.url}
-                                      target="_blank"
-                                      rel="noopener noreferrer"
-                                      className="text-blue-600 hover:text-blue-900 truncate block max-w-xs"
-                                      title={item.url}
-                                    >
-                                      {item.url.length > 50 ? item.url.substring(0, 50) + '...' : item.url}
-                                    </a>
-                                  ) : (
-                                    <em className="text-gray-500">Not specified</em>
-                                  )}
-                                </td>
-                                <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
-                                  {new Date(item.created_at).toLocaleDateString("UTC")}
-                                </td>
-                                <td className="px-5 py-4 whitespace-nowrap text-sm font-medium">
-                                  <div className="flex gap-2">
-                                    <button
-                                      onClick={() => handleEditBlockItem(item)}
-                                      className="text-blue-600 hover:text-blue-900"
-                                    >
-                                      Edit
-                                    </button>
-                                    <button
-                                      onClick={() => handleDeleteBlockItem(item)}
-                                      className="text-red-600 hover:text-red-900"
-                                    >
-                                      Delete
-                                    </button>
-                                  </div>
-                                </td>
-                              </tr>
-                            ))
-                          )}
-                        </tbody>
-                      </table>
-                    </div>
-                  </>
-                )}
-              </div>
-
-              {/* Block List Modal */}
-              <Modal
-                isOpen={blockListModalOpen}
-                onClose={() => setBlockListModalOpen(false)}
-                title={editingBlockItem ? 'Edit Block List Item' : 'Add Block List Item'}
-              >
-                <form onSubmit={handleSaveBlockItem}>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
-                    <input
-                      type="text"
-                      value={blockListFormData.company_name}
-                      onChange={(e) => setBlockListFormData({ ...blockListFormData, company_name: e.target.value })}
-                      placeholder="Company name to block"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">Leave empty if blocking by URL only</p>
-                  </div>
-                  <div className="mb-4">
-                    <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
-                    <input
-                      type="url"
-                      value={blockListFormData.url}
-                      onChange={(e) => setBlockListFormData({ ...blockListFormData, url: e.target.value })}
-                      placeholder="https://example.com"
-                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
-                    />
-                    <p className="mt-1 text-xs text-gray-500">Leave empty if blocking by company name only</p>
-                  </div>
-                  <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
-                    <p className="text-sm text-yellow-800">
-                      <strong>Note:</strong> At least one field (Company Name or URL) must be provided.
-                    </p>
-                  </div>
-                  <button
-                    type="submit"
-                    className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-dark"
-                  >
-                    {editingBlockItem ? 'Update Block List Item' : 'Add Block List Item'}
-                  </button>
-                </form>
-              </Modal>
-            </>
-          )}
-
           <AlertModal
             isOpen={alertOpen}
             onClose={() => setAlertOpen(false)}
@@ -872,6 +741,136 @@ const Jobs = () => {
         </div>
       </>
       }
+      {/* Block List Tab Content */}
+      {activeTab === 'blocklist' && (
+        <>
+          <div className="flex justify-end items-center mb-6">
+            <button
+              onClick={handleAddBlockItem}
+              className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark"
+            >
+              + Add Block List Item
+            </button>
+          </div>
+
+          <div className="bg-white rounded-lg shadow p-6">
+            {blockListLoading ? (
+              <div className="text-center py-8">Loading block list...</div>
+            ) : (
+              <>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
+                        <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company Name</th>
+                        <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
+                        <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Created At</th>
+                        <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {blockListItems.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" className="px-6 py-4 text-center text-gray-500">
+                            No block list items found
+                          </td>
+                        </tr>
+                      ) : (
+                        blockListItems.map((item) => (
+                          <tr key={item.id}>
+                            <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">{item.id}</td>
+                            <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">
+                              {item.company_name || <em className="text-gray-500">Not specified</em>}
+                            </td>
+                            <td className="px-5 py-4 text-sm text-gray-500">
+                              {item.url ? (
+                                <a
+                                  href={item.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-blue-600 hover:text-blue-900 truncate block max-w-xs"
+                                  title={item.url}
+                                >
+                                  {item.url.length > 50 ? item.url.substring(0, 50) + '...' : item.url}
+                                </a>
+                              ) : (
+                                <em className="text-gray-500">Not specified</em>
+                              )}
+                            </td>
+                            <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
+                              {new Date(item.created_at).toLocaleDateString("UTC")}
+                            </td>
+                            <td className="px-5 py-4 whitespace-nowrap text-sm font-medium">
+                              <div className="flex gap-2">
+                                <button
+                                  onClick={() => handleEditBlockItem(item)}
+                                  className="text-blue-600 hover:text-blue-900"
+                                >
+                                  Edit
+                                </button>
+                                <button
+                                  onClick={() => handleDeleteBlockItem(item)}
+                                  className="text-red-600 hover:text-red-900"
+                                >
+                                  Delete
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Block List Modal */}
+          <Modal
+            isOpen={blockListModalOpen}
+            onClose={() => setBlockListModalOpen(false)}
+            title={editingBlockItem ? 'Edit Block List Item' : 'Add Block List Item'}
+          >
+            <form onSubmit={handleSaveBlockItem}>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">Company Name</label>
+                <input
+                  type="text"
+                  value={blockListFormData.company_name}
+                  onChange={(e) => setBlockListFormData({ ...blockListFormData, company_name: e.target.value })}
+                  placeholder="Company name to block"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <p className="mt-1 text-xs text-gray-500">Leave empty if blocking by URL only</p>
+              </div>
+              <div className="mb-4">
+                <label className="block text-sm font-medium text-gray-700 mb-1">URL</label>
+                <input
+                  type="url"
+                  value={blockListFormData.url}
+                  onChange={(e) => setBlockListFormData({ ...blockListFormData, url: e.target.value })}
+                  placeholder="https://example.com"
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <p className="mt-1 text-xs text-gray-500">Leave empty if blocking by company name only</p>
+              </div>
+              <div className="mb-4 p-3 bg-yellow-50 border border-yellow-200 rounded-md">
+                <p className="text-sm text-yellow-800">
+                  <strong>Note:</strong> At least one field (Company Name or URL) must be provided.
+                </p>
+              </div>
+              <button
+                type="submit"
+                className="w-full bg-primary text-white py-2 px-4 rounded-md hover:bg-primary-dark"
+              >
+                {editingBlockItem ? 'Update Block List Item' : 'Add Block List Item'}
+              </button>
+            </form>
+          </Modal>
+        </>
+      )}
     </div>
   );
 };
