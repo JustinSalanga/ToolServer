@@ -571,3 +571,74 @@ exports.isBlocked = async (company, url) => {
     const res = await db.query(query, params);
     return res.rows.length > 0;
 }
+
+// History Management Functions
+exports.createHistoryLog = async (userId, userEmail, actionType, entityType, entityId, description, ipAddress, metadata = null) => {
+    const res = await db.query(
+        'INSERT INTO history (user_id, user_email, action_type, entity_type, entity_id, description, ip_address, metadata) VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING *',
+        [userId, userEmail, actionType, entityType, entityId, description, ipAddress, metadata ? JSON.stringify(metadata) : null]
+    );
+    return res.rows[0];
+}
+
+exports.getHistoryLogs = async (page = 1, limit = 50, userId = null, actionType = null, entityType = null) => {
+    let query = 'SELECT * FROM history';
+    let countQuery = 'SELECT COUNT(*) as total FROM history';
+    let params = [];
+    let countParams = [];
+    let whereConditions = [];
+
+    if (userId) {
+        whereConditions.push('user_id = $' + (params.length + 1));
+        params.push(userId);
+        countParams.push(userId);
+    }
+
+    if (actionType) {
+        whereConditions.push('action_type = $' + (params.length + 1));
+        params.push(actionType);
+        countParams.push(actionType);
+    }
+
+    if (entityType) {
+        whereConditions.push('entity_type = $' + (params.length + 1));
+        params.push(entityType);
+        countParams.push(entityType);
+    }
+
+    if (whereConditions.length > 0) {
+        const whereClause = ' WHERE ' + whereConditions.join(' AND ');
+        query += whereClause;
+        countQuery += whereClause;
+    }
+
+    query += ' ORDER BY created_at DESC';
+
+    // Add pagination
+    const offset = (page - 1) * limit;
+    query += ` LIMIT $${params.length + 1} OFFSET $${params.length + 2}`;
+    params.push(limit, offset);
+
+    const [logsRes, countRes] = await Promise.all([
+        db.query(query, params),
+        db.query(countQuery, countParams)
+    ]);
+
+    return {
+        logs: logsRes.rows,
+        pagination: {
+            page: parseInt(page),
+            limit: parseInt(limit),
+            total: parseInt(countRes.rows[0].total),
+            totalPages: Math.ceil(parseInt(countRes.rows[0].total) / limit)
+        }
+    };
+}
+
+exports.getHistoryLogById = async (id) => {
+    const res = await db.query(
+        'SELECT * FROM history WHERE id = $1',
+        [id]
+    );
+    return res.rows[0];
+}

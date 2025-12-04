@@ -251,3 +251,21 @@ export const BlockListAPI = {
     });
   },
 };
+
+export const HistoryAPI = {
+  async getAll(page = 1, limit = 50, user_id = null, action_type = null, entity_type = null) {
+    const params = new URLSearchParams();
+    params.append('page', page);
+    params.append('limit', limit);
+    if (user_id) params.append('user_id', user_id);
+    if (action_type) params.append('action_type', action_type);
+    if (entity_type) params.append('entity_type', entity_type);
+
+    const url = `/history/?${params.toString()}`;
+    return apiRequest(url);
+  },
+
+  async getById(id) {
+    return apiRequest(`/history/${id}`);
+  },
+};

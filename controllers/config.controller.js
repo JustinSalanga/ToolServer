@@ -1,5 +1,6 @@
 const model = require('../database/model');
 const { handleError } = require('../utils/utils');
+const { getClientIP } = require('../utils/ip.utils');
 
 // Get all configurations
 exports.getAllConfigs = async (req, res) => {
@@ -24,7 +25,23 @@ exports.savePrompt = async (req, res) => {
             return handleError(res, 400, 'User email and prompt are required');
         }
 
+        const existingConfig = await model.getConfigByEmail(user_email);
         const config = await model.savePrompt(user_email, prompt);
+
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail || user_email,
+            existingConfig ? 'update' : 'create',
+            'config',
+            config.id,
+            `${existingConfig ? 'Prompt updated' : 'Prompt saved'} for user: ${user_email}`,
+            clientIP,
+            { user_email, field: 'prompt' }
+        );
 
         res.status(200).json({
             message: 'Prompt saved successfully',
@@ -68,7 +85,23 @@ exports.saveResume = async (req, res) => {
             return handleError(res, 400, 'User email and resume are required');
         }
 
+        const existingConfig = await model.getConfigByEmail(user_email);
         const config = await model.saveResume(user_email, resume);
+
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail || user_email,
+            existingConfig ? 'update' : 'create',
+            'config',
+            config.id,
+            `${existingConfig ? 'Resume updated' : 'Resume saved'} for user: ${user_email}`,
+            clientIP,
+            { user_email, field: 'resume' }
+        );
 
         res.status(200).json({
             message: 'Resume saved successfully',
@@ -112,7 +145,23 @@ exports.saveTemplate = async (req, res) => {
             return handleError(res, 400, 'User email and template path are required');
         }
 
+        const existingConfig = await model.getConfigByEmail(user_email);
         const config = await model.saveTemplate(user_email, template_path);
+
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail || user_email,
+            existingConfig ? 'update' : 'create',
+            'config',
+            config.id,
+            `${existingConfig ? 'Template path updated' : 'Template path saved'} for user: ${user_email}`,
+            clientIP,
+            { user_email, field: 'template_path', template_path }
+        );
 
         res.status(200).json({
             message: 'Template path saved successfully',
@@ -156,7 +205,23 @@ exports.saveFolder = async (req, res) => {
             return handleError(res, 400, 'User email and folder path are required');
         }
 
+        const existingConfig = await model.getConfigByEmail(user_email);
         const config = await model.saveFolder(user_email, folder_path);
+
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail || user_email,
+            existingConfig ? 'update' : 'create',
+            'config',
+            config.id,
+            `${existingConfig ? 'Folder path updated' : 'Folder path saved'} for user: ${user_email}`,
+            clientIP,
+            { user_email, field: 'folder_path', folder_path }
+        );
 
         res.status(200).json({
             message: 'Folder path saved successfully',

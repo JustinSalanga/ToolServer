@@ -7,6 +7,7 @@ import Users from './pages/Users';
 import GptSetting from './pages/GptSetting';
 import Configs from './pages/Configs';
 import Jobs from './pages/Jobs';
+import History from './pages/History';
 
 const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
@@ -57,6 +58,7 @@ const AppLayout = () => {
           <Route path="/gpt" element={<GptSetting />} />
           <Route path="/configs" element={<Configs />} />
           <Route path="/jobs" element={<Jobs />} />
+          <Route path="/history" element={<History />} />
           <Route path="/login" element={<Navigate to="/users" replace />} />
           <Route path="/" element={<Navigate to="/users" replace />} />
         </Routes>

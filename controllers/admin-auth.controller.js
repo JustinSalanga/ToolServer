@@ -52,6 +52,17 @@ exports.adminLogin = async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 
+        // Log history
+        await model.createHistoryLog(
+            user.id,
+            user.email,
+            'login',
+            'user',
+            user.id,
+            `Admin logged in: ${user.email}`,
+            clientIP
+        );
+
         // Remove password from response
         delete user.password;
 
@@ -95,6 +106,17 @@ exports.adminRegister = async (req, res) => {
         // Create user with registration IP and admin role
         const newUser = await model.createUser(name, email, hashedPassword, clientIP, userRole);
         console.log(`Admin registered with IP ${clientIP}: ${newUser.email}`);
+
+        // Log history
+        await model.createHistoryLog(
+            newUser.id,
+            newUser.email,
+            'sign_up',
+            'user',
+            newUser.id,
+            `Admin registered: ${name} (${email})`,
+            clientIP
+        );
 
         // Remove password from response
         delete newUser.password;

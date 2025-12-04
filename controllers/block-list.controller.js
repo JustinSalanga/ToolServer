@@ -1,5 +1,6 @@
 const model = require('../database/model');
 const { handleError } = require('../utils/utils');
+const { getClientIP } = require('../utils/ip.utils');
 
 exports.getBlockListItems = async (req, res) => {
     try {
@@ -43,6 +44,21 @@ exports.createBlockListItem = async (req, res) => {
     try {
         const newItem = await model.createBlockListItem(company_name, url);
 
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'create',
+            'block_list',
+            newItem.id,
+            `Block list item created: ${company_name || url}`,
+            clientIP,
+            { company_name, url }
+        );
+
         return res.status(201).json({
             message: 'Block list item created successfully',
             item: newItem
@@ -72,6 +88,21 @@ exports.updateBlockListItem = async (req, res) => {
         // Update item
         const updatedItem = await model.updateBlockListItem(id, company_name, url);
 
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'update',
+            'block_list',
+            id,
+            `Block list item updated: ${company_name || url}`,
+            clientIP,
+            { company_name, url }
+        );
+
         res.status(200).json({
             message: 'Block list item updated successfully',
             item: updatedItem
@@ -92,6 +123,21 @@ exports.deleteBlockListItem = async (req, res) => {
         }
 
         await model.deleteBlockListItem(id);
+
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'delete',
+            'block_list',
+            id,
+            `Block list item deleted: ${item.company_name || item.url}`,
+            clientIP,
+            { company_name: item.company_name, url: item.url }
+        );
 
         res.status(200).json({
             message: 'Block list item deleted successfully'

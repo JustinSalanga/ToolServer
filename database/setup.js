@@ -104,6 +104,20 @@ async function setupDatabase() {
                 CHECK (company_name IS NOT NULL OR url IS NOT NULL)
             );
         `);
+        await appClient.query(`
+            CREATE TABLE IF NOT EXISTS history (
+                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                user_id INT,
+                user_email VARCHAR(100),
+                action_type VARCHAR(50) NOT NULL,
+                entity_type VARCHAR(50) NOT NULL,
+                entity_id INT,
+                description TEXT,
+                ip_address VARCHAR(45),
+                metadata JSONB,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
         
         // console.log('🧩 Tables created successfully!');
 

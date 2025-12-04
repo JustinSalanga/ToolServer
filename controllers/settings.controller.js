@@ -1,5 +1,6 @@
 const model = require('../database/model');
 const { handleError } = require('../utils/utils');
+const { getClientIP } = require('../utils/ip.utils');
 
 exports.getSettings = async (req, res) => {
     try {
@@ -74,6 +75,21 @@ exports.createSetting = async (req, res) => {
 
         const newSetting = await model.createSetting(key, value);
 
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'create',
+            'setting',
+            newSetting.id,
+            `Setting created: ${key}`,
+            clientIP,
+            { key, value: value.substring(0, 100) } // Limit value length in metadata
+        );
+
         res.status(201).json({
             message: 'Setting created successfully',
             setting: newSetting
@@ -114,6 +130,21 @@ exports.updateSetting = async (req, res) => {
 
         const updatedSetting = await model.updateSetting(id, key, value);
 
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'update',
+            'setting',
+            id,
+            `Setting updated: ${key}`,
+            clientIP,
+            { key, value: value.substring(0, 100) } // Limit value length in metadata
+        );
+
         res.status(200).json({
             message: 'Setting updated successfully',
             setting: updatedSetting
@@ -140,6 +171,21 @@ exports.deleteSetting = async (req, res) => {
         }
 
         await model.deleteSetting(id);
+
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'delete',
+            'setting',
+            id,
+            `Setting deleted: ${setting.key}`,
+            clientIP,
+            { key: setting.key }
+        );
 
         res.status(200).json({
             message: 'Setting deleted successfully'

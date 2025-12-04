@@ -1,5 +1,6 @@
 const model = require('../database/model');
 const { handleError } = require('../utils/utils');
+const { getClientIP } = require('../utils/ip.utils');
 
 exports.getJobs = async (req, res) => {
     try {
@@ -117,6 +118,21 @@ exports.createJob = async (req, res) => {
     const formattedDate = formatDate(date);
     const newJob = await model.createJob(title, company, tech, url, description, formattedDate);
 
+    // Log history
+    const userId = req.user ? req.user.id : null;
+    const userEmail = req.user ? req.user.email : null;
+    const clientIP = getClientIP(req);
+    await model.createHistoryLog(
+        userId,
+        userEmail,
+        'create',
+        'job',
+        newJob.id,
+        `Job created: ${title} at ${company}`,
+        clientIP,
+        { job_id: newJob.id, company, url }
+    );
+
     return res.status(201).json({
         message: 'Job created successfully',
         job: newJob
@@ -142,6 +158,21 @@ exports.updateJob = async (req, res) => {
         // Update job
         const updatedJob = await model.updateJob(id, title, company, date, tech, url, description);
 
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'update',
+            'job',
+            id,
+            `Job updated: ${title} at ${company}`,
+            clientIP,
+            { job_id: id, company, url }
+        );
+
         res.status(200).json({
             message: 'Job updated successfully',
             job: updatedJob
@@ -162,6 +193,21 @@ exports.deleteJob = async (req, res) => {
         }
 
         await model.deleteJob(id);
+
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'delete',
+            'job',
+            id,
+            `Job deleted: ${job.title} at ${job.company}`,
+            clientIP,
+            { job_id: id, company: job.company }
+        );
 
         res.status(200).json({
             message: 'Job deleted successfully'

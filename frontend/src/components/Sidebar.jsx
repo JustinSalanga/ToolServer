@@ -63,6 +63,18 @@ const Sidebar = () => {
           <span className="mr-3 text-xl">💼</span>
           Jobs
         </Link>
+
+        <Link
+          to="/history"
+          className={`flex items-center px-4 py-3 mb-2 rounded-lg transition-colors ${
+            isActive('/history')
+              ? 'bg-primary text-white'
+              : 'text-slate-300 hover:bg-slate-700'
+          }`}
+        >
+          <span className="mr-3 text-xl">📜</span>
+          History
+        </Link>
       </nav>
 
       {user && (

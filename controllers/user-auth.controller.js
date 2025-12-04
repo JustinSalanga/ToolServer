@@ -46,6 +46,17 @@ exports.userLogin = async (req, res) => {
             { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
         );
 
+        // Log history
+        await model.createHistoryLog(
+            user.id,
+            user.email,
+            'login',
+            'user',
+            user.id,
+            `User logged in: ${user.email}`,
+            clientIP
+        );
+
         // Remove password from response
         delete user.password;
 
@@ -89,6 +100,17 @@ exports.userRegister = async (req, res) => {
         // Create user with registration IP and role
         const newUser = await model.createUser(name, email, hashedPassword, clientIP, userRole);
         console.log(`User registered with IP ${clientIP}: ${newUser.email}`);
+
+        // Log history
+        await model.createHistoryLog(
+            newUser.id,
+            newUser.email,
+            'sign_up',
+            'user',
+            newUser.id,
+            `User registered: ${name} (${email})`,
+            clientIP
+        );
 
         // Remove password from response
         delete newUser.password;
