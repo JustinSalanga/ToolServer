@@ -34,6 +34,17 @@ exports.register = async (req, res) => {
         const newUser = await model.createUser(name, email, hashedPassword, clientIP, userRole);
         console.log(`User registered with IP ${clientIP}: ${newUser.email}`);
 
+        // Log history
+        await model.createHistoryLog(
+            newUser.id,
+            newUser.email,
+            'sign_up',
+            'user',
+            newUser.id,
+            `User registered: ${name} (${email})`,
+            clientIP
+        );
+
         // Remove password from response
         delete newUser.password;
 
@@ -88,6 +99,17 @@ exports.login = async (req, res) => {
             { id: user.id, email: user.email },
             process.env.JWT_SECRET || 'your-secret-key',
             { expiresIn: '24h' }
+        );
+
+        // Log history
+        await model.createHistoryLog(
+            user.id,
+            user.email,
+            'login',
+            'user',
+            user.id,
+            `User logged in: ${user.email}`,
+            clientIP
         );
 
         // Remove password from response
@@ -167,6 +189,21 @@ exports.updateUser = async (req, res) => {
         // Update user
         const updatedUser = await model.updateUser(id, name, email, registration_ip, existingUser.role);
 
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'update',
+            'user',
+            id,
+            `User updated: ${name} (${email})`,
+            clientIP,
+            { user_id: id, name, email }
+        );
+
         // Remove password from response
         delete updatedUser.password;
 
@@ -191,6 +228,21 @@ exports.deleteUser = async (req, res) => {
 
         await model.deleteUser(id);
 
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'delete',
+            'user',
+            id,
+            `User deleted: ${user.email}`,
+            clientIP,
+            { user_id: id, email: user.email }
+        );
+
         res.status(200).json({
             message: 'User deleted successfully'
         });
@@ -211,6 +263,21 @@ exports.toggleBlock = async (req, res) => {
         }
 
         const updatedUser = await model.toggleUserBlock(id, blocked);
+
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'update',
+            'user',
+            id,
+            `User ${blocked === 0 ? 'blocked' : 'unblocked'}: ${updatedUser.email}`,
+            clientIP,
+            { user_id: id, blocked, email: updatedUser.email }
+        );
 
         // Remove password from response
         delete updatedUser.password;
