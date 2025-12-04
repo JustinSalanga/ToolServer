@@ -290,3 +290,39 @@ exports.getAllConfig = async (req, res) => {
         handleError(res, 500, 'Error fetching configuration');
     }
 }
+
+// Delete configuration for user
+exports.deleteConfig = async (req, res) => {
+    const { userEmail } = req.params;
+
+    try {
+        const config = await model.getConfigByEmail(userEmail);
+        if (!config) {
+            return handleError(res, 404, 'Configuration not found for this user');
+        }
+
+        await model.deleteConfig(userEmail);
+
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmailFromReq = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmailFromReq || userEmail,
+            'delete',
+            'config',
+            config.id,
+            `User configuration deleted: ${userEmail}`,
+            clientIP,
+            { user_email: userEmail }
+        );
+
+        res.status(200).json({
+            message: 'Configuration deleted successfully'
+        });
+    } catch (error) {
+        console.error('Delete config error:', error);
+        handleError(res, 500, 'Error deleting configuration');
+    }
+}

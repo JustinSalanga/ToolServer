@@ -167,6 +167,14 @@ exports.saveFolder = async (userEmail, folderPath) => {
     return exports.createOrUpdateConfig(userEmail, 'folder_path', folderPath);
 }
 
+exports.deleteConfig = async (userEmail) => {
+    const res = await db.query(
+        'DELETE FROM user_configs WHERE user_email = $1 RETURNING *',
+        [userEmail]
+    );
+    return res.rows[0];
+}
+
 // Job Management Functions
 exports.getJobs = async (date = null, page = 1, limit = 20, search = null, orderDirection = 'ASC') => {
     let query = 'SELECT * FROM jobs';

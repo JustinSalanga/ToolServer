@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { ConfigAPI } from '../services/api';
-import { Modal, AlertModal } from '../components/Modal';
+import { Modal, AlertModal, ConfirmModal } from '../components/Modal';
 
 const Configs = () => {
   const [configs, setConfigs] = useState([]);
@@ -13,6 +13,10 @@ const Configs = () => {
   const [alertOpen, setAlertOpen] = useState(false);
   const [alertMessage, setAlertMessage] = useState('');
   const [alertTitle, setAlertTitle] = useState('');
+  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [confirmTitle, setConfirmTitle] = useState('');
+  const [confirmCallback, setConfirmCallback] = useState(null);
 
   useEffect(() => {
     loadConfigs();
@@ -51,6 +55,13 @@ const Configs = () => {
     setAlertOpen(true);
   };
 
+  const showConfirm = (title, message, callback) => {
+    setConfirmTitle(title);
+    setConfirmMessage(message);
+    setConfirmCallback(() => callback);
+    setConfirmOpen(true);
+  };
+
   const handleViewConfig = async (userEmail) => {
     setViewModalOpen(true);
     setLoadingConfig(true);
@@ -65,6 +76,18 @@ const Configs = () => {
     } finally {
       setLoadingConfig(false);
     }
+  };
+
+  const handleDeleteConfig = (userEmail) => {
+    showConfirm('Delete Configuration', `Are you sure you want to delete the configuration for ${userEmail}?`, async () => {
+      try {
+        await ConfigAPI.delete(userEmail);
+        showAlert('Success', 'Configuration deleted successfully!');
+        loadConfigs();
+      } catch (error) {
+        showAlert('Error', error.message);
+      }
+    });
   };
 
   return (
@@ -152,12 +175,20 @@ const Configs = () => {
                         {new Date(config.updated_at).toLocaleString()}
                       </td>
                       <td className="px-6 py-4 whitespace-wrap text-wrap text-sm font-medium">
-                        <button
-                          onClick={() => handleViewConfig(config.user_email)}
-                          className="text-blue-600 hover:text-blue-900"
-                        >
-                          👁️ View
-                        </button>
+                        <div className="flex gap-2">
+                          <button
+                            onClick={() => handleViewConfig(config.user_email)}
+                            className="text-blue-600 hover:text-blue-900"
+                          >
+                            👁️ View
+                          </button>
+                          <button
+                            onClick={() => handleDeleteConfig(config.user_email)}
+                            className="text-red-600 hover:text-red-900"
+                          >
+                            Delete
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))
@@ -239,6 +270,14 @@ const Configs = () => {
         onClose={() => setAlertOpen(false)}
         title={alertTitle}
         message={alertMessage}
+      />
+
+      <ConfirmModal
+        isOpen={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+        title={confirmTitle}
+        message={confirmMessage}
+        onConfirm={confirmCallback}
       />
     </div>
   );

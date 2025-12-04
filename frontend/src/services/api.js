@@ -179,6 +179,12 @@ export const ConfigAPI = {
   async getFolder(userEmail) {
     return apiRequest(`/config/folder/${encodeURIComponent(userEmail)}`, { skipAuth: true });
   },
+
+  async delete(userEmail) {
+    return apiRequest(`/config/${encodeURIComponent(userEmail)}`, {
+      method: 'DELETE',
+    });
+  },
 };
 
 export const JobsAPI = {

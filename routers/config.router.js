@@ -10,7 +10,8 @@ const {
     getTemplate,
     saveFolder,
     getFolder,
-    getAllConfig
+    getAllConfig,
+    deleteConfig
 } = require('../controllers/config.controller');
 
 // All routes are public (no authentication required)
@@ -36,5 +37,8 @@ router.get('/folder/:userEmail', getFolder);
 
 // Get all config for specific user
 router.get('/:userEmail', getAllConfig);
+
+// Delete config for specific user
+router.delete('/:userEmail', deleteConfig);
 
 module.exports = router;
