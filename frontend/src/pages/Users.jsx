@@ -7,6 +7,7 @@ import { AdminAuthAPI } from '../services/api';
 const Users = () => {
   const [users, setUsers] = useState([]);
   const [filteredUsers, setFilteredUsers] = useState([]);
+  const [allowedEmails, setAllowedEmails] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [modalOpen, setModalOpen] = useState(false);
@@ -22,6 +23,7 @@ const Users = () => {
 
   useEffect(() => {
     loadUsers();
+    loadAllowedEmails();
   }, []);
 
   useEffect(() => {
@@ -37,6 +39,15 @@ const Users = () => {
       showAlert('Error', error.message);
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadAllowedEmails = async () => {
+    try {
+      const data = await AllowedEmailAPI.getAll();
+      setAllowedEmails(data.emails || []);
+    } catch (error) {
+      console.error('Error loading allowed emails:', error);
     }
   };
 
@@ -148,10 +159,33 @@ const Users = () => {
     });
   };
 
+  const isEmailAllowed = (email) => {
+    return allowedEmails.some(allowed => allowed.email.toLowerCase() === email.toLowerCase());
+  };
+
+  const getAllowedEmailId = (email) => {
+    const allowed = allowedEmails.find(allowed => allowed.email.toLowerCase() === email.toLowerCase());
+    return allowed ? allowed.id : null;
+  };
+
   const handleAllowEmail = async (user) => {
+    const isAllowed = isEmailAllowed(user.email);
+    
     try {
-      await AllowedEmailAPI.create(user.email);
-      showAlert('Success', `Email ${user.email} added to allowed list successfully!`);
+      if (isAllowed) {
+        // Remove from allowed list
+        const allowedEmailId = getAllowedEmailId(user.email);
+        if (allowedEmailId) {
+          await AllowedEmailAPI.delete(allowedEmailId);
+          showAlert('Success', `Email ${user.email} removed from allowed list successfully!`);
+          loadAllowedEmails();
+        }
+      } else {
+        // Add to allowed list
+        await AllowedEmailAPI.create(user.email);
+        showAlert('Success', `Email ${user.email} added to allowed list successfully!`);
+        loadAllowedEmails();
+      }
     } catch (error) {
       showAlert('Error', error.message);
     }
@@ -208,6 +242,7 @@ const Users = () => {
                 ) : (
                   filteredUsers.map((user) => {
                     const isCurrentUser = currentUser && (user.id === currentUser.id || user.email === currentUser.email);
+                    const emailIsAllowed = isEmailAllowed(user.email);
                     return (
                       <tr key={user.id}>
                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">{user.id}</td>
@@ -245,9 +280,9 @@ const Users = () => {
                             </button>
                             <button
                               onClick={() => handleAllowEmail(user)}
-                              className="text-green-600 hover:text-green-900"
+                              className={emailIsAllowed ? "text-red-600 hover:text-red-900" : "text-green-600 hover:text-green-900"}
                             >
-                              Allow Email
+                              {emailIsAllowed ? 'Deny Email' : 'Allow Email'}
                             </button>
                             <button
                               onClick={() => handleToggleBlock(user, user.blocked === 1 ? 0 : 1)}
