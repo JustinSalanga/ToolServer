@@ -180,7 +180,7 @@ const Configs = () => {
                             onClick={() => handleViewConfig(config.user_email)}
                             className="text-blue-600 hover:text-blue-900"
                           >
-                            👁️ View
+                            View
                           </button>
                           <button
                             onClick={() => handleDeleteConfig(config.user_email)}
