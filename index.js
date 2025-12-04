@@ -38,6 +38,7 @@ const morgan = require('morgan');
     const settingsRouter = require('./routers/settings.router');
     const blockListRouter = require('./routers/block-list.router');
     const historyRouter = require('./routers/history.router');
+    const allowedEmailRouter = require('./routers/allowed-email.router');
     const { setupDatabase } = require('./database/setup');
 
     const app = express();
@@ -66,6 +67,7 @@ const morgan = require('morgan');
     app.use('/api/settings', settingsRouter);
     app.use('/api/block-list', blockListRouter);
     app.use('/api/history', historyRouter);
+    app.use('/api/allowed-emails', allowedEmailRouter);
 
     // 404 handler for unmatched API routes
     app.use('/api', (req, res) => {

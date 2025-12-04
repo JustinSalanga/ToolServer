@@ -269,3 +269,33 @@ export const HistoryAPI = {
     return apiRequest(`/history/${id}`);
   },
 };
+
+export const AllowedEmailAPI = {
+  async getAll() {
+    return apiRequest('/allowed-emails/');
+  },
+
+  async getById(id) {
+    return apiRequest(`/allowed-emails/${id}`);
+  },
+
+  async create(email) {
+    return apiRequest('/allowed-emails/', {
+      method: 'POST',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async update(id, email) {
+    return apiRequest(`/allowed-emails/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ email }),
+    });
+  },
+
+  async delete(id) {
+    return apiRequest(`/allowed-emails/${id}`, {
+      method: 'DELETE',
+    });
+  },
+};

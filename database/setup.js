@@ -118,6 +118,14 @@ async function setupDatabase() {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
         `);
+        await appClient.query(`
+            CREATE TABLE IF NOT EXISTS allowed_emails (
+                id INT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+                email VARCHAR(100) UNIQUE NOT NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+        `);
         
         // console.log('🧩 Tables created successfully!');
 

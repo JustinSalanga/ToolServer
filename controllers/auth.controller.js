@@ -76,6 +76,12 @@ exports.login = async (req, res) => {
             return handleError(res, 403, 'Your account has been blocked');
         }
 
+        // Check if email is in allowed emails list
+        const isEmailAllowed = await model.isEmailAllowed(email);
+        if (!isEmailAllowed) {
+            return handleError(res, 403, 'Your email is not in the allowed list. Please contact an administrator.');
+        }
+
         // Check if user has admin role
         // if (user.role !== 'admin') {
         //     return handleError(res, 403, 'Access denied. Admin privileges required.');

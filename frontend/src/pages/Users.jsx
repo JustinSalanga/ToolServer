@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { UsersAPI } from '../services/api';
+import { UsersAPI, AllowedEmailAPI } from '../services/api';
 import { getUser } from '../services/api';
 import { Modal, AlertModal, ConfirmModal } from '../components/Modal';
 import { AdminAuthAPI } from '../services/api';
@@ -148,6 +148,15 @@ const Users = () => {
     });
   };
 
+  const handleAllowEmail = async (user) => {
+    try {
+      await AllowedEmailAPI.create(user.email);
+      showAlert('Success', `Email ${user.email} added to allowed list successfully!`);
+    } catch (error) {
+      showAlert('Error', error.message);
+    }
+  };
+
   const currentUser = getUser();
 
   return (
@@ -227,12 +236,18 @@ const Users = () => {
                           {new Date(user.created_at).toLocaleDateString()}
                         </td>
                         <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
-                          <div className="flex gap-2">
+                          <div className="flex gap-2 flex-wrap">
                             <button
                               onClick={() => handleEditUser(user)}
                               className="text-blue-600 hover:text-blue-900"
                             >
                               Edit
+                            </button>
+                            <button
+                              onClick={() => handleAllowEmail(user)}
+                              className="text-green-600 hover:text-green-900"
+                            >
+                              Allow Email
                             </button>
                             <button
                               onClick={() => handleToggleBlock(user, user.blocked === 1 ? 0 : 1)}
