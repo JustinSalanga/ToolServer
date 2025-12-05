@@ -4,6 +4,14 @@ const { getClientIP } = require('../utils/ip.utils');
 
 exports.getSettings = async (req, res) => {
     try {
+        // Check if requester email is in allowed list
+        if (req.user && req.user.email) {
+            const isEmailAllowed = await model.isEmailAllowed(req.user.email);
+            if (!isEmailAllowed) {
+                return handleError(res, 403, 'Your email is not in the allowed list. Please contact an administrator.');
+            }
+        }
+
         const settings = await model.getSettings();
 
         // Filter out sensitive settings (managed in dedicated pages)
@@ -25,6 +33,14 @@ exports.getSetting = async (req, res) => {
     const { id } = req.params;
 
     try {
+        // Check if requester email is in allowed list
+        if (req.user && req.user.email) {
+            const isEmailAllowed = await model.isEmailAllowed(req.user.email);
+            if (!isEmailAllowed) {
+                return handleError(res, 403, 'Your email is not in the allowed list. Please contact an administrator.');
+            }
+        }
+
         const setting = await model.getSettingById(id);
 
         if (!setting) {
@@ -44,6 +60,14 @@ exports.getSettingByKey = async (req, res) => {
     const { key } = req.params;
 
     try {
+        // Check if requester email is in allowed list
+        if (req.user && req.user.email) {
+            const isEmailAllowed = await model.isEmailAllowed(req.user.email);
+            if (!isEmailAllowed) {
+                return handleError(res, 403, 'Your email is not in the allowed list. Please contact an administrator.');
+            }
+        }
+
         const setting = await model.getSettingByKey(key);
 
         if (!setting) {
@@ -63,6 +87,14 @@ exports.createSetting = async (req, res) => {
     const { key, value } = req.body;
 
     try {
+        // Check if requester email is in allowed list
+        if (req.user && req.user.email) {
+            const isEmailAllowed = await model.isEmailAllowed(req.user.email);
+            if (!isEmailAllowed) {
+                return handleError(res, 403, 'Your email is not in the allowed list. Please contact an administrator.');
+            }
+        }
+
         if (!key || !value) {
             return handleError(res, 400, 'Key and value are required');
         }
@@ -105,6 +137,14 @@ exports.updateSetting = async (req, res) => {
     const { key, value } = req.body;
 
     try {
+        // Check if requester email is in allowed list
+        if (req.user && req.user.email) {
+            const isEmailAllowed = await model.isEmailAllowed(req.user.email);
+            if (!isEmailAllowed) {
+                return handleError(res, 403, 'Your email is not in the allowed list. Please contact an administrator.');
+            }
+        }
+
         const existingSetting = await model.getSettingById(id);
         if (!existingSetting) {
             return handleError(res, 404, 'Setting not found');
