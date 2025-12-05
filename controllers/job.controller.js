@@ -67,25 +67,6 @@ exports.getJob = async (req, res) => {
     }
 }
 
-const formatDate = (date) => {
-    const dateObj = new Date(date);
-    if (isNaN(dateObj.getTime())) {
-        return date;
-    }
-    const formatter = new Intl.DateTimeFormat('en-US', {
-        timeZone: 'UTC',
-        year: 'numeric',
-        month: '2-digit',
-        day: '2-digit'
-    });
-    const parts = formatter.formatToParts(dateObj);
-    const year = parts.find(part => part.type === 'year').value;
-    const month = parts.find(part => part.type === 'month').value;
-    const day = parts.find(part => part.type === 'day').value;
-    const isoDate = `${year}-${month}-${day}`;
-    return isoDate;
-}
-
 exports.createJob = async (req, res) => {
     const { title, company, tech, url, description, date } = req.body;
 
@@ -115,8 +96,7 @@ exports.createJob = async (req, res) => {
         return handleError(res, 403, 'This job is blocked. Company name or URL is in the block list.');
     }
 
-    const formattedDate = formatDate(date);
-    const newJob = await model.createJob(title, company, tech, url, description, formattedDate);
+    const newJob = await model.createJob(title, company, tech, url, description, date);
 
     // Log history
     const userId = req.user ? req.user.id : null;
