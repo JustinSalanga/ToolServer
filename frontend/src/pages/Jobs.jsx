@@ -289,7 +289,6 @@ const Jobs = () => {
         Company: job.company,
         'Tech Stack': job.tech || '',
         URL: job.url || '',
-        Description: (job.description || '').replace(/\n/g, ' ').trim(),
         Date: new Date(job.date).toLocaleDateString(),
         'Created At': new Date(job.created_at).toLocaleDateString(),
         'Updated At': job.updated_at ? new Date(job.updated_at).toLocaleDateString() : '',
