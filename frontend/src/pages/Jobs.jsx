@@ -283,6 +283,8 @@ const Jobs = () => {
         return;
       }
 
+      console.log('Tested 1')
+
       const worksheetData = jobsToExport.map((job) => ({
         'Job ID': job.id,
         Title: job.title,
