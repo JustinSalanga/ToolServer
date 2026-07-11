@@ -304,13 +304,14 @@ const Jobs = () => {
         return;
       }
 
+      console.log('Tested 1')
+
       const worksheetData = jobsToExport.map((job) => ({
         'Job ID': job.id,
         Title: job.title,
         Company: job.company,
         'Tech Stack': job.tech || '',
         URL: job.url || '',
-        Description: (job.description || '').replace(/\n/g, ' ').trim(),
         Date: new Date(job.date).toLocaleDateString(),
         'Created At': new Date(job.created_at).toLocaleDateString(),
         'Updated At': job.updated_at ? new Date(job.updated_at).toLocaleDateString() : '',
