@@ -410,6 +410,14 @@ exports.deleteJob = async (jobId) => {
     return res.rows[0];
 }
 
+exports.deleteJobsByDate = async (date) => {
+    const res = await db.query(
+        'DELETE FROM jobs WHERE date = $1 RETURNING *',
+        [date]
+    );
+    return res.rows;
+}
+
 // Function to read bid.xlsx file and insert data into database
 exports.importBidData = async (filePath = 'bid.xlsx') => {
     let client;

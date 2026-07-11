@@ -1,5 +1,5 @@
-const TOKEN_KEY = 'auth_token';
-const USER_KEY = 'auth_user';
+const TOKEN_KEY = "auth_token";
+const USER_KEY = "auth_user";
 
 export const getToken = () => localStorage.getItem(TOKEN_KEY);
 export const setToken = (token) => localStorage.setItem(TOKEN_KEY, token);
@@ -18,19 +18,19 @@ export const setUser = (user) => {
 };
 
 // Use the proxy in development, or direct API URL in production
-const API_BASE = import.meta.env.DEV 
-  ? '/api'  // Vite proxy will handle this
+const API_BASE = import.meta.env.DEV
+  ? "/api" // Vite proxy will handle this
   : `https://${window.location.hostname}/api`;
 
 async function apiRequest(endpoint, options = {}) {
   const token = getToken();
   const headers = {
-    'Content-Type': 'application/json',
+    "Content-Type": "application/json",
     ...options.headers,
   };
 
   if (token && !options.skipAuth) {
-    headers['Authorization'] = `Bearer ${token}`;
+    headers["Authorization"] = `Bearer ${token}`;
   }
 
   try {
@@ -41,41 +41,41 @@ async function apiRequest(endpoint, options = {}) {
 
     if (response.status === 401) {
       removeToken();
-      throw new Error('Session expired. Please login again.');
+      throw new Error("Session expired. Please login again.");
     }
 
     let data;
-    const contentType = response.headers.get('content-type');
-    if (contentType && contentType.includes('application/json')) {
+    const contentType = response.headers.get("content-type");
+    if (contentType && contentType.includes("application/json")) {
       data = await response.json();
     } else {
       const text = await response.text();
-      data = { error: text || 'An error occurred' };
+      data = { error: text || "An error occurred" };
     }
 
     if (!response.ok) {
-      throw new Error(data.error || data.message || 'An error occurred');
+      throw new Error(data.error || data.message || "An error occurred");
     }
 
     return data;
   } catch (error) {
-    console.error('API Error:', error);
+    console.error("API Error:", error);
     throw error;
   }
 }
 
 export const AdminAuthAPI = {
   async register(name, email, password, confirm_password) {
-    return apiRequest('/admin/register', {
-      method: 'POST',
+    return apiRequest("/admin/register", {
+      method: "POST",
       body: JSON.stringify({ name, email, password, confirm_password }),
       skipAuth: true,
     });
   },
 
   async login(email, password) {
-    const data = await apiRequest('/admin/login', {
-      method: 'POST',
+    const data = await apiRequest("/admin/login", {
+      method: "POST",
       body: JSON.stringify({ email, password }),
       skipAuth: true,
     });
@@ -89,7 +89,7 @@ export const AdminAuthAPI = {
   },
 
   async verify() {
-    return apiRequest('/admin/verify');
+    return apiRequest("/admin/verify");
   },
 
   logout() {
@@ -99,7 +99,7 @@ export const AdminAuthAPI = {
 
 export const UsersAPI = {
   async getAll() {
-    return apiRequest('/auth/');
+    return apiRequest("/auth/");
   },
 
   async getById(id) {
@@ -108,20 +108,20 @@ export const UsersAPI = {
 
   async update(id, name, email, registration_ip) {
     return apiRequest(`/auth/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({ name, email, registration_ip }),
     });
   },
 
   async delete(id) {
     return apiRequest(`/auth/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   },
 
   async toggleBlock(id, blocked) {
     return apiRequest(`/auth/${id}/block`, {
-      method: 'PATCH',
+      method: "PATCH",
       body: JSON.stringify({ blocked }),
     });
   },
@@ -129,27 +129,27 @@ export const UsersAPI = {
 
 export const GPTAPI = {
   async getAvailableModels() {
-    return apiRequest('/gpt/models');
+    return apiRequest("/gpt/models");
   },
 
   async getSelectedModel() {
-    return apiRequest('/gpt/selected');
+    return apiRequest("/gpt/selected");
   },
 
   async setSelectedModel(modelId) {
-    return apiRequest('/gpt/selected', {
-      method: 'POST',
+    return apiRequest("/gpt/selected", {
+      method: "POST",
       body: JSON.stringify({ modelId }),
     });
   },
 
   async getApiKey() {
-    return apiRequest('/gpt/apikey');
+    return apiRequest("/gpt/apikey");
   },
 
   async saveApiKey(apiKey) {
-    return apiRequest('/gpt/apikey', {
-      method: 'POST',
+    return apiRequest("/gpt/apikey", {
+      method: "POST",
       body: JSON.stringify({ apiKey }),
     });
   },
@@ -157,44 +157,60 @@ export const GPTAPI = {
 
 export const ConfigAPI = {
   async getAllConfigs() {
-    return apiRequest('/config/all', { skipAuth: true });
+    return apiRequest("/config/all", { skipAuth: true });
   },
 
   async getConfig(userEmail) {
-    return apiRequest(`/config/${encodeURIComponent(userEmail)}`, { skipAuth: true });
+    return apiRequest(`/config/${encodeURIComponent(userEmail)}`, {
+      skipAuth: true,
+    });
   },
 
   async getPrompt(userEmail) {
-    return apiRequest(`/config/prompt/${encodeURIComponent(userEmail)}`, { skipAuth: true });
+    return apiRequest(`/config/prompt/${encodeURIComponent(userEmail)}`, {
+      skipAuth: true,
+    });
   },
 
   async getResume(userEmail) {
-    return apiRequest(`/config/resume/${encodeURIComponent(userEmail)}`, { skipAuth: true });
+    return apiRequest(`/config/resume/${encodeURIComponent(userEmail)}`, {
+      skipAuth: true,
+    });
   },
 
   async getTemplate(userEmail) {
-    return apiRequest(`/config/template/${encodeURIComponent(userEmail)}`, { skipAuth: true });
+    return apiRequest(`/config/template/${encodeURIComponent(userEmail)}`, {
+      skipAuth: true,
+    });
   },
 
   async getFolder(userEmail) {
-    return apiRequest(`/config/folder/${encodeURIComponent(userEmail)}`, { skipAuth: true });
+    return apiRequest(`/config/folder/${encodeURIComponent(userEmail)}`, {
+      skipAuth: true,
+    });
   },
 
   async delete(userEmail) {
     return apiRequest(`/config/${encodeURIComponent(userEmail)}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   },
 };
 
 export const JobsAPI = {
-  async getAll(date = null, page = 1, limit = 20, search = null, orderDirection = 'ASC') {
+  async getAll(
+    date = null,
+    page = 1,
+    limit = 20,
+    search = null,
+    orderDirection = "ASC",
+  ) {
     const params = new URLSearchParams();
-    if (date) params.append('date', date);
-    if (search) params.append('search', search);
-    params.append('page', page);
-    params.append('limit', limit);
-    params.append('orderDirection', orderDirection);
+    if (date) params.append("date", date);
+    if (search) params.append("search", search);
+    params.append("page", page);
+    params.append("limit", limit);
+    params.append("orderDirection", orderDirection);
 
     const url = `/jobs/?${params.toString()}`;
     return apiRequest(url, { skipAuth: true });
@@ -205,16 +221,24 @@ export const JobsAPI = {
   },
 
   async create(id, title, company, date, tech, url, description) {
-    return apiRequest('/jobs/', {
-      method: 'POST',
-      body: JSON.stringify({ id, title, company, date, tech, url, description }),
+    return apiRequest("/jobs/", {
+      method: "POST",
+      body: JSON.stringify({
+        id,
+        title,
+        company,
+        date,
+        tech,
+        url,
+        description,
+      }),
       skipAuth: true,
     });
   },
 
   async update(id, title, company, date, tech, url, description) {
     return apiRequest(`/jobs/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({ title, company, date, tech, url, description }),
       skipAuth: true,
     });
@@ -222,7 +246,16 @@ export const JobsAPI = {
 
   async delete(id) {
     return apiRequest(`/jobs/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
+      skipAuth: true,
+    });
+  },
+
+  async deleteByDate(date) {
+    const params = new URLSearchParams();
+    params.append("date", date);
+    return apiRequest(`/jobs/by-date?${params.toString()}`, {
+      method: "DELETE",
       skipAuth: true,
     });
   },
@@ -230,7 +263,7 @@ export const JobsAPI = {
 
 export const BlockListAPI = {
   async getAll() {
-    return apiRequest('/block-list/');
+    return apiRequest("/block-list/");
   },
 
   async getById(id) {
@@ -238,34 +271,40 @@ export const BlockListAPI = {
   },
 
   async create(company_name, url) {
-    return apiRequest('/block-list/', {
-      method: 'POST',
+    return apiRequest("/block-list/", {
+      method: "POST",
       body: JSON.stringify({ company_name, url }),
     });
   },
 
   async update(id, company_name, url) {
     return apiRequest(`/block-list/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({ company_name, url }),
     });
   },
 
   async delete(id) {
     return apiRequest(`/block-list/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   },
 };
 
 export const HistoryAPI = {
-  async getAll(page = 1, limit = 50, user_id = null, action_type = null, entity_type = null) {
+  async getAll(
+    page = 1,
+    limit = 50,
+    user_id = null,
+    action_type = null,
+    entity_type = null,
+  ) {
     const params = new URLSearchParams();
-    params.append('page', page);
-    params.append('limit', limit);
-    if (user_id) params.append('user_id', user_id);
-    if (action_type) params.append('action_type', action_type);
-    if (entity_type) params.append('entity_type', entity_type);
+    params.append("page", page);
+    params.append("limit", limit);
+    if (user_id) params.append("user_id", user_id);
+    if (action_type) params.append("action_type", action_type);
+    if (entity_type) params.append("entity_type", entity_type);
 
     const url = `/history/?${params.toString()}`;
     return apiRequest(url);
@@ -278,7 +317,7 @@ export const HistoryAPI = {
 
 export const AllowedEmailAPI = {
   async getAll() {
-    return apiRequest('/allowed-emails/');
+    return apiRequest("/allowed-emails/");
   },
 
   async getById(id) {
@@ -286,29 +325,29 @@ export const AllowedEmailAPI = {
   },
 
   async create(email) {
-    return apiRequest('/allowed-emails/', {
-      method: 'POST',
+    return apiRequest("/allowed-emails/", {
+      method: "POST",
       body: JSON.stringify({ email }),
     });
   },
 
   async update(id, email) {
     return apiRequest(`/allowed-emails/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({ email }),
     });
   },
 
   async delete(id) {
     return apiRequest(`/allowed-emails/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   },
 };
 
 export const AssemblyTokenAPI = {
   async getAll() {
-    return apiRequest('/assembly-tokens/');
+    return apiRequest("/assembly-tokens/");
   },
 
   async getById(id) {
@@ -316,22 +355,22 @@ export const AssemblyTokenAPI = {
   },
 
   async create(user_id, api_key) {
-    return apiRequest('/assembly-tokens/', {
-      method: 'POST',
+    return apiRequest("/assembly-tokens/", {
+      method: "POST",
       body: JSON.stringify({ user_id, api_key }),
     });
   },
 
   async update(id, user_id, api_key) {
     return apiRequest(`/assembly-tokens/${id}`, {
-      method: 'PUT',
+      method: "PUT",
       body: JSON.stringify({ user_id, api_key }),
     });
   },
 
   async delete(id) {
     return apiRequest(`/assembly-tokens/${id}`, {
-      method: 'DELETE',
+      method: "DELETE",
     });
   },
 };

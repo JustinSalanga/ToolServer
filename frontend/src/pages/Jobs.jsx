@@ -198,6 +198,27 @@ const Jobs = () => {
     });
   };
 
+  const handleDeleteAllJobs = () => {
+    if (!dateFilter) {
+      showAlert('Select a Date', 'Please select a date first. "Delete All" removes every job for the selected date.');
+      return;
+    }
+    showConfirm(
+      'Delete All Jobs',
+      `Are you sure you want to delete ALL jobs for ${dateFilter}? This cannot be undone.`,
+      async () => {
+        try {
+          const result = await JobsAPI.deleteByDate(dateFilter);
+          showAlert('Success', result.message || 'Jobs deleted successfully!');
+          setCurrentPage(1);
+          loadJobs();
+        } catch (error) {
+          showAlert('Error', error.message);
+        }
+      }
+    );
+  };
+
   const handleDateFilterChange = (e) => {
     setDateFilter(e.target.value);
     setCurrentPage(1);
@@ -434,6 +455,14 @@ const Jobs = () => {
               className="bg-primary text-white px-4 py-2 rounded-md hover:bg-primary-dark"
             >
               + Add Job
+            </button>
+            <button
+              onClick={handleDeleteAllJobs}
+              disabled={!dateFilter}
+              title={dateFilter ? `Delete all jobs for ${dateFilter}` : 'Select a date to enable'}
+              className="bg-red-600 text-white px-4 py-2 rounded-md hover:bg-red-700 disabled:opacity-50 disabled:cursor-not-allowed"
+            >
+              🗑️ Delete All
             </button>
           </div>
         </div>

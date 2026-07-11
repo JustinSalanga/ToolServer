@@ -119,6 +119,47 @@ exports.createJob = async (req, res) => {
     });
 }
 
+exports.deleteJobsByDate = async (req, res) => {
+    const date = req.query.date || req.body.date;
+
+    if (!date) {
+        return handleError(res, 400, 'Date is required');
+    }
+
+    // Validate date format (YYYY-MM-DD)
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+        return handleError(res, 400, 'Invalid date format. Expected YYYY-MM-DD');
+    }
+
+    try {
+        const deletedJobs = await model.deleteJobsByDate(date);
+
+        // Log history
+        const userId = req.user ? req.user.id : null;
+        const userEmail = req.user ? req.user.email : null;
+        const clientIP = getClientIP(req);
+        await model.createHistoryLog(
+            userId,
+            userEmail,
+            'delete',
+            'job',
+            null,
+            `Deleted ${deletedJobs.length} job(s) for date ${date}`,
+            clientIP,
+            { date, count: deletedJobs.length }
+        );
+
+        res.status(200).json({
+            message: `Deleted ${deletedJobs.length} job(s) for ${date}`,
+            date,
+            count: deletedJobs.length
+        });
+    } catch (error) {
+        console.error('Delete jobs by date error:', error);
+        handleError(res, 500, 'Error deleting jobs for date');
+    }
+}
+
 exports.updateJob = async (req, res) => {
     const { id } = req.params;
     const { title, company, date, tech, url, description } = req.body;
