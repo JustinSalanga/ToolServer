@@ -97,14 +97,14 @@ exports.adminRegister = async (req, res) => {
     }
 
     // Check if user already registered from this IP address
-    const ipUser = await model.getUserByIP(clientIP);
-    if (ipUser) {
-      return handleError(
-        res,
-        403,
-        "A user has already been registered from this IP address",
-      );
-    }
+    // const ipUser = await model.getUserByIP(clientIP);
+    // if (ipUser) {
+    //   return handleError(
+    //     res,
+    //     403,
+    //     "A user has already been registered from this IP address",
+    //   );
+    // }
 
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 10);
