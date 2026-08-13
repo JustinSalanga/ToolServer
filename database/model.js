@@ -176,7 +176,8 @@ exports.deleteConfig = async (userEmail) => {
 }
 
 // Job Management Functions
-exports.getJobs = async (date = null, page = 1, limit = 20, search = null, orderDirection = 'ASC') => {
+// industry: 0 = software, 1 = civil
+exports.getJobs = async (date = null, page = 1, limit = 20, search = null, orderDirection = 'ASC', industry = null) => {
     let query = 'SELECT * FROM jobs';
     let countQuery = 'SELECT COUNT(*) as total FROM jobs';
     let params = [];
@@ -187,6 +188,12 @@ exports.getJobs = async (date = null, page = 1, limit = 20, search = null, order
         whereConditions.push('date = $' + (params.length + 1));
         params.push(date);
         countParams.push(date);
+    }
+
+    if (industry !== null && industry !== undefined && industry !== '') {
+        whereConditions.push('industry = $' + (params.length + 1));
+        params.push(parseInt(industry));
+        countParams.push(parseInt(industry));
     }
 
     if (search) {
@@ -228,7 +235,15 @@ exports.getJobs = async (date = null, page = 1, limit = 20, search = null, order
     };
 }
 
-exports.getJobsByDate = async (date) => {
+exports.getJobsByDate = async (date, industry = null) => {
+    if (industry !== null && industry !== undefined && industry !== '') {
+        const res = await db.query(
+            'SELECT * FROM jobs WHERE date = $1 AND industry = $2 ORDER BY id ASC',
+            [date, parseInt(industry)]
+        );
+        return res.rows;
+    }
+
     const res = await db.query(
         'SELECT * FROM jobs WHERE date = $1 ORDER BY id ASC',
         [date]
@@ -382,22 +397,22 @@ exports.getJobByTitleAndCompany = async (title, company) => {
     return res.rows[0];
 }
 
-exports.createJob = async (title, company, tech, url, description, date) => {
+exports.createJob = async (title, company, tech, url, description, date, industry = 0) => {
     const normalizedUrl = url ? normalizeUrl(url) : null;
     const res = await db.query(
-        `INSERT INTO jobs (title, company, tech, url, normalized_url, description, date) VALUES ($1, $2, $3, $4, $5, $6, $7)
+        `INSERT INTO jobs (title, company, tech, url, normalized_url, description, date, industry) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          RETURNING *`,
-        [title, company, tech, url, normalizedUrl, description, date]
+        [title, company, tech, url, normalizedUrl, description, date, industry]
     );
     return res.rows[0];
 }
 
-exports.updateJob = async (jobId, title, company, date, tech, url, description) => {
+exports.updateJob = async (jobId, title, company, date, tech, url, description, industry = 0) => {
     const normalizedUrl = url ? normalizeUrl(url) : null;
     const res = await db.query(
-        `UPDATE jobs SET title = $1, company = $2, date = $3, tech = $4, url = $5, normalized_url = $6, description = $7, 
-         updated_at = CURRENT_TIMESTAMP WHERE id = $8 RETURNING *`,
-        [title, company, date, tech, url, normalizedUrl, description, jobId]
+        `UPDATE jobs SET title = $1, company = $2, date = $3, tech = $4, url = $5, normalized_url = $6, description = $7,
+         industry = $8, updated_at = CURRENT_TIMESTAMP WHERE id = $9 RETURNING *`,
+        [title, company, date, tech, url, normalizedUrl, description, industry, jobId]
     );
     return res.rows[0];
 }

@@ -204,10 +204,13 @@ export const JobsAPI = {
     limit = 20,
     search = null,
     orderDirection = "ASC",
+    industry = null,
   ) {
     const params = new URLSearchParams();
     if (date) params.append("date", date);
     if (search) params.append("search", search);
+    if (industry !== null && industry !== undefined && industry !== "")
+      params.append("industry", industry);
     params.append("page", page);
     params.append("limit", limit);
     params.append("orderDirection", orderDirection);
@@ -220,7 +223,7 @@ export const JobsAPI = {
     return apiRequest(`/jobs/${id}`, { skipAuth: true });
   },
 
-  async create(id, title, company, date, tech, url, description) {
+  async create(id, title, company, date, tech, url, description, industry = 0) {
     return apiRequest("/jobs/", {
       method: "POST",
       body: JSON.stringify({
@@ -231,15 +234,24 @@ export const JobsAPI = {
         tech,
         url,
         description,
+        industry,
       }),
       skipAuth: true,
     });
   },
 
-  async update(id, title, company, date, tech, url, description) {
+  async update(id, title, company, date, tech, url, description, industry = 0) {
     return apiRequest(`/jobs/${id}`, {
       method: "PUT",
-      body: JSON.stringify({ title, company, date, tech, url, description }),
+      body: JSON.stringify({
+        title,
+        company,
+        date,
+        tech,
+        url,
+        description,
+        industry,
+      }),
       skipAuth: true,
     });
   },

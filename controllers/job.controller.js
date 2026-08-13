@@ -2,10 +2,26 @@ const model = require('../database/model');
 const { handleError } = require('../utils/utils');
 const { getClientIP } = require('../utils/ip.utils');
 
+// Job industry categories
+const INDUSTRY_SOFTWARE = 0;
+const INDUSTRY_CIVIL = 1;
+
+// Returns the normalized industry value, or null when it is not a valid category
+const parseIndustry = (value) => {
+    if (value === undefined || value === null || value === '') {
+        return null;
+    }
+    const parsed = parseInt(value);
+    if (parsed !== INDUSTRY_SOFTWARE && parsed !== INDUSTRY_CIVIL) {
+        return null;
+    }
+    return parsed;
+}
+
 exports.getJobs = async (req, res) => {
     try {
-        const { date, page = 1, limit = 20, search, orderDirection = 'ASC' } = req.query;
-        const result = await model.getJobs(date, page, limit, search, orderDirection);
+        const { date, page = 1, limit = 20, search, orderDirection = 'ASC', industry } = req.query;
+        const result = await model.getJobs(date, page, limit, search, orderDirection, parseIndustry(industry));
 
         res.status(200).json({
             jobs: result.jobs,
@@ -33,7 +49,7 @@ exports.getTodayJobs = async (req, res) => {
         const month = parts.find(part => part.type === 'month').value;
         const day = parts.find(part => part.type === 'day').value;
         const isoDate = `${year}-${month}-${day}`;
-        const jobs = await model.getJobsByDate(isoDate);
+        const jobs = await model.getJobsByDate(isoDate, parseIndustry(req.query.industry));
 
         console.log(isoDate);
 
@@ -68,12 +84,18 @@ exports.getJob = async (req, res) => {
 }
 
 exports.createJob = async (req, res) => {
-    const { title, company, tech, url, description, date } = req.body;
+    const { title, company, tech, url, description, date, industry } = req.body;
 
     // Validate required fields
     if (!title || !company || !date) {
         return handleError(res, 400, 'Title, company and date are required');
     }
+
+    // Validate industry (0 = software, 1 = civil), defaults to software
+    if (industry !== undefined && industry !== null && industry !== '' && parseIndustry(industry) === null) {
+        return handleError(res, 400, 'Invalid industry. Expected 0 (software) or 1 (civil)');
+    }
+    const jobIndustry = parseIndustry(industry) ?? INDUSTRY_SOFTWARE;
 
     // Validate URL format if provided
     if (url) {
@@ -96,7 +118,7 @@ exports.createJob = async (req, res) => {
         return handleError(res, 403, 'This job is blocked. Company name or URL is in the block list.');
     }
 
-    const newJob = await model.createJob(title, company, tech, url, description, date);
+    const newJob = await model.createJob(title, company, tech, url, description, date, jobIndustry);
 
     // Log history
     const userId = req.user ? req.user.id : null;
@@ -110,7 +132,7 @@ exports.createJob = async (req, res) => {
         newJob.id,
         `Job created: ${title} at ${company}`,
         clientIP,
-        { job_id: newJob.id, company, url }
+        { job_id: newJob.id, company, url, industry: jobIndustry }
     );
 
     return res.status(201).json({
@@ -162,7 +184,7 @@ exports.deleteJobsByDate = async (req, res) => {
 
 exports.updateJob = async (req, res) => {
     const { id } = req.params;
-    const { title, company, date, tech, url, description } = req.body;
+    const { title, company, date, tech, url, description, industry } = req.body;
 
     try {
         // Check if job exists
@@ -176,8 +198,14 @@ exports.updateJob = async (req, res) => {
             return handleError(res, 400, 'Title, company and date are required');
         }
 
+        // Validate industry (0 = software, 1 = civil), keeps the current value when omitted
+        if (industry !== undefined && industry !== null && industry !== '' && parseIndustry(industry) === null) {
+            return handleError(res, 400, 'Invalid industry. Expected 0 (software) or 1 (civil)');
+        }
+        const jobIndustry = parseIndustry(industry) ?? existingJob.industry ?? INDUSTRY_SOFTWARE;
+
         // Update job
-        const updatedJob = await model.updateJob(id, title, company, date, tech, url, description);
+        const updatedJob = await model.updateJob(id, title, company, date, tech, url, description, jobIndustry);
 
         // Log history
         const userId = req.user ? req.user.id : null;
@@ -191,7 +219,7 @@ exports.updateJob = async (req, res) => {
             id,
             `Job updated: ${title} at ${company}`,
             clientIP,
-            { job_id: id, company, url }
+            { job_id: id, company, url, industry: jobIndustry }
         );
 
         res.status(200).json({

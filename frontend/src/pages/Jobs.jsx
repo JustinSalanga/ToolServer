@@ -12,6 +12,17 @@ const getTodayDate = () => {
   return `${year}-${month}-${day}`;
 };
 
+// Job industry categories (matches the `industry` column: 0 = software, 1 = civil)
+const INDUSTRY_OPTIONS = [
+  { value: 0, label: 'Software' },
+  { value: 1, label: 'Civil' },
+];
+
+const getIndustryLabel = (industry) => {
+  const option = INDUSTRY_OPTIONS.find((item) => item.value === Number(industry));
+  return option ? option.label : 'Software';
+};
+
 const Jobs = () => {
   const [activeTab, setActiveTab] = useState('jobs'); // 'jobs' or 'blocklist'
 
@@ -20,6 +31,7 @@ const Jobs = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [dateFilter, setDateFilter] = useState(getTodayDate());
+  const [industryFilter, setIndustryFilter] = useState('');
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(20);
   const [totalPages, setTotalPages] = useState(1);
@@ -35,6 +47,7 @@ const Jobs = () => {
     tech: '',
     url: '',
     description: '',
+    industry: 0,
   });
 
   // Block list state
@@ -69,7 +82,7 @@ const Jobs = () => {
     if (activeTab === 'jobs') {
       loadJobs();
     }
-  }, [currentPage, pageSize, dateFilter]);
+  }, [currentPage, pageSize, dateFilter, industryFilter]);
 
   const initializeDateFilter = () => {
     const today = new Date();
@@ -92,7 +105,7 @@ const Jobs = () => {
   const loadJobs = async (search = null) => {
     try {
       setLoading(true);
-      const data = await JobsAPI.getAll(dateFilter || null, currentPage, pageSize, search || searchTerm, 'DESC');
+      const data = await JobsAPI.getAll(dateFilter || null, currentPage, pageSize, search || searchTerm, 'DESC', industryFilter);
       setJobs(data.jobs || []);
       setCurrentPage(data.pagination.page);
       setTotalPages(data.pagination.totalPages);
@@ -127,6 +140,7 @@ const Jobs = () => {
       tech: '',
       url: '',
       description: '',
+      industry: industryFilter === '' ? 0 : Number(industryFilter),
     });
     setModalOpen(true);
   };
@@ -149,6 +163,7 @@ const Jobs = () => {
       tech: job.tech || '',
       url: job.url || '',
       description: job.description || '',
+      industry: Number(job.industry) === 1 ? 1 : 0,
     });
     setModalOpen(true);
   };
@@ -164,7 +179,8 @@ const Jobs = () => {
           formData.date,
           formData.tech,
           formData.url,
-          formData.description
+          formData.description,
+          Number(formData.industry)
         );
         showAlert('Success', 'Job updated successfully!');
       } else {
@@ -175,7 +191,8 @@ const Jobs = () => {
           formData.date,
           formData.tech,
           formData.url,
-          formData.description
+          formData.description,
+          Number(formData.industry)
         );
         showAlert('Success', 'Job added successfully!');
       }
@@ -224,6 +241,11 @@ const Jobs = () => {
     setCurrentPage(1);
   };
 
+  const handleIndustryFilterChange = (e) => {
+    setIndustryFilter(e.target.value);
+    setCurrentPage(1);
+  };
+
   const handleClearDateFilter = () => {
     setDateFilter('');
     setCurrentPage(1);
@@ -247,7 +269,7 @@ const Jobs = () => {
 
   const copyTodayJobs = async () => {
     try {
-      const data = await JobsAPI.getAll(dateFilter || null, 1, 10000, searchTerm, 'ASC');
+      const data = await JobsAPI.getAll(dateFilter || null, 1, 10000, searchTerm, 'ASC', industryFilter);
       const jobsToCopy = data.jobs || [];
 
       if (jobsToCopy.length === 0) {
@@ -255,7 +277,7 @@ const Jobs = () => {
         return;
       }
 
-      const headers = ['Job ID', 'Title', 'Company', 'Tech Stack', 'URL', 'Description', 'Date', 'Created At', 'Updated At'];
+      const headers = ['Job ID', 'Title', 'Company', 'Industry', 'Tech Stack', 'URL', 'Description', 'Date', 'Created At', 'Updated At'];
       const csvData = [headers];
 
       jobsToCopy.forEach((job) => {
@@ -264,6 +286,7 @@ const Jobs = () => {
           job.id,
           job.title,
           job.company,
+          getIndustryLabel(job.industry),
           job.tech || '',
           job.url || '',
           cleanDescription,
@@ -296,7 +319,7 @@ const Jobs = () => {
 
   const exportJobsToExcel = async () => {
     try {
-      const data = await JobsAPI.getAll(dateFilter || null, 1, 10000, searchTerm, 'ASC');
+      const data = await JobsAPI.getAll(dateFilter || null, 1, 10000, searchTerm, 'ASC', industryFilter);
       const jobsToExport = data.jobs || [];
 
       if (jobsToExport.length === 0) {
@@ -310,6 +333,7 @@ const Jobs = () => {
         'Job ID': job.id,
         Title: job.title,
         Company: job.company,
+        Industry: getIndustryLabel(job.industry),
         'Tech Stack': job.tech || '',
         URL: job.url || '',
         Date: new Date(job.date).toLocaleDateString(),
@@ -489,6 +513,18 @@ const Jobs = () => {
                 </option>
               ))}
             </select>
+            <select
+              value={industryFilter}
+              onChange={handleIndustryFilterChange}
+              className="px-4 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+            >
+              <option value="">All Industries</option>
+              {INDUSTRY_OPTIONS.map((option) => (
+                <option key={option.value} value={option.value}>
+                  {option.label}
+                </option>
+              ))}
+            </select>
             <button
               onClick={handleClearDateFilter}
               className="bg-gray-200 text-gray-700 px-4 py-2 rounded-md hover:bg-gray-300"
@@ -514,6 +550,7 @@ const Jobs = () => {
                       <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">ID</th>
                       <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Title</th>
                       <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Company</th>
+                      <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Industry</th>
                       <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Tech Stack</th>
                       <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">URL</th>
                       <th className="px-5 py-3 text-left text-xs font-medium text-gray-500 uppercase">Description</th>
@@ -525,7 +562,7 @@ const Jobs = () => {
                   <tbody className="bg-white divide-y divide-gray-200">
                     {jobs.length === 0 ? (
                       <tr>
-                        <td colSpan="9" className="px-6 py-4 text-center text-gray-500">
+                        <td colSpan="10" className="px-6 py-4 text-center text-gray-500">
                           No jobs found
                         </td>
                       </tr>
@@ -542,6 +579,16 @@ const Jobs = () => {
                             }
                           </td>
                           <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-900">{job.company}</td>
+                          <td className="px-5 py-4 whitespace-nowrap text-sm">
+                            <span
+                              className={`px-2 py-1 rounded-full text-xs font-medium ${Number(job.industry) === 1
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-blue-100 text-blue-800'
+                                }`}
+                            >
+                              {getIndustryLabel(job.industry)}
+                            </span>
+                          </td>
                           <td className="px-5 py-4 whitespace-nowrap text-sm text-gray-500">
                             {job.tech || <em>Not specified</em>}
                           </td>
@@ -702,6 +749,21 @@ const Jobs = () => {
                       placeholder="Tech Corp"
                       className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
                     />
+                  </div>
+                  <div className="mb-4">
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Industry *</label>
+                    <select
+                      required
+                      value={formData.industry}
+                      onChange={(e) => setFormData({ ...formData, industry: Number(e.target.value) })}
+                      className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary"
+                    >
+                      {INDUSTRY_OPTIONS.map((option) => (
+                        <option key={option.value} value={option.value}>
+                          {option.label}
+                        </option>
+                      ))}
+                    </select>
                   </div>
                   <div className="mb-4">
                     <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>

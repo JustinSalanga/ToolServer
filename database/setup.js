@@ -90,9 +90,14 @@ async function setupDatabase() {
                 normalized_url TEXT,
                 description TEXT,
                 date VARCHAR(20) NOT NULL,
+                industry INT NOT NULL DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
+        `);
+        // industry: 0 = software, 1 = civil (added after the table already existed)
+        await appClient.query(`
+            ALTER TABLE jobs ADD COLUMN IF NOT EXISTS industry INT NOT NULL DEFAULT 0;
         `);
         await appClient.query(`
             CREATE TABLE IF NOT EXISTS block_list (
