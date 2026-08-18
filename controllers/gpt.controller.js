@@ -30,6 +30,11 @@ const GPT_MODELS = [
     description: "Input $2.50 | Cached $0.25 | Output $15.00",
   },
   {
+    id: "gpt-5.4-nano",
+    name: "GPT-5.4 Nano",
+    description: "Input $0.20 | Cached $0.02 | Output $1.25",
+  },
+  {
     id: "gpt-5.4-mini",
     name: "GPT-5.4 Mini",
     description: "Input $0.75 | Cached $0.075 | Output $4.50",
